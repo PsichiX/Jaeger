@@ -250,6 +250,9 @@ public:
         virtual void assemble( std::ostream& output, bool dropValue );
 
         std::vector< ConditionData > conditions;
+
+    private:
+        std::size_t m_uid;
     };
 
     typedef std::shared_ptr< Condition > ConditionPtr;

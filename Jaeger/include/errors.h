@@ -49,6 +49,7 @@ namespace Errors
     template<> const std::string control< pegtl::opt< Grammar::whitespaces, Grammar::identifier_saved > >::errorMessage = "expected optional type identifier";
     template<> const std::string control< Grammar::function_body >::errorMessage = "expected function body";
     template<> const std::string control< pegtl::opt< Grammar::whitespaces, Grammar::function_call_sections > >::errorMessage = "expected function body sections";
+    template<> const std::string control< pegtl::one< '[' > >::errorMessage = "expected `[` character";
     template<> const std::string control< pegtl::one< ']' > >::errorMessage = "expected `]` character";
     template<> const std::string control< Grammar::function_args >::errorMessage = "expected function arguments list";
     template<> const std::string control< Grammar::string_saved >::errorMessage = "expected string lateral";

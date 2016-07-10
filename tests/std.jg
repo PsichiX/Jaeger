@@ -262,6 +262,121 @@
 ]
 
 ###
+	Boolean checks
+###
+
+[equals Bool <a Int> <b Int>
+	/let <r Bool>/
+	/set r (Bool)/
+	/asm ~~ eq void $a->$value $b->$value => $r->$value; ~~/
+	r
+]
+
+[equals Bool <a Float> <b Float>
+	/let <r Bool>/
+	/set r (Bool)/
+	/asm ~~ eq void $a->$value $b->$value => $r->$value; ~~/
+	r
+]
+
+[equals Bool <a String> <b String>
+	/let <r Bool>/
+	/set r (Bool)/
+	#TODO: /asm ~~  ~~/
+	r
+]
+
+[equals Bool <a Handle> <b Handle>
+	/let <r Bool>/
+	/set r (Bool)/
+	/asm ~~ eq void $a->$value $b->$value => $r->$value; ~~/
+	r
+]
+
+[equals Bool <a Bool> <b Bool>
+	/let <r Bool>/
+	/set r (Bool)/
+	/asm ~~ eq void $a->$value $b->$value => $r->$value; ~~/
+	r
+]
+
+[less Bool <a Int> <b Int>
+	/let <r Bool>/
+	/set r (Bool)/
+	/asm ~~ ls void $a->$value $b->$value => $r->$value; ~~/
+	r
+]
+
+[less Bool <a Float> <b Float>
+	/let <r Bool>/
+	/set r (Bool)/
+	/asm ~~ ls void $a->$value $b->$value => $r->$value; ~~/
+	r
+]
+
+[less Bool <a String> <b String>
+	/let <r Bool>/
+	/set r (Bool)/
+	#TODO: /asm ~~  ~~/
+	r
+]
+
+[less Bool <a Handle> <b Handle>
+	/let <r Bool>/
+	/set r (Bool)/
+	/asm ~~ ls void $a->$value $b->$value => $r->$value; ~~/
+	r
+]
+
+[less Bool <a Bool> <b Bool>
+	/let <r Bool>/
+	/set r (Bool)/
+	/asm ~~ ls void $a->$value $b->$value => $r->$value; ~~/
+	r
+]
+
+[greater Bool <a Int> <b Int>
+	/let <r Bool>/
+	/set r (Bool)/
+	/asm ~~ gr void $a->$value $b->$value => $r->$value; ~~/
+	r
+]
+
+[greater Bool <a Float> <b Float>
+	/let <r Bool>/
+	/set r (Bool)/
+	/asm ~~ gr void $a->$value $b->$value => $r->$value; ~~/
+	r
+]
+
+[greater Bool <a String> <b String>
+	/let <r Bool>/
+	/set r (Bool)/
+	#TODO: /asm ~~  ~~/
+	r
+]
+
+[greater Bool <a Handle> <b Handle>
+	/let <r Bool>/
+	/set r (Bool)/
+	/asm ~~ gr void $a->$value $b->$value => $r->$value; ~~/
+	r
+]
+
+[greater Bool <a Bool> <b Bool>
+	/let <r Bool>/
+	/set r (Bool)/
+	/asm ~~ gr void $a->$value $b->$value => $r->$value; ~~/
+	r
+]
+
+[not Bool <v Bool>
+	/let <r Bool>/
+	/if v then [ /set r true/ ]/
+	r
+]
+
+###
 	IO manipulation
 ###
 

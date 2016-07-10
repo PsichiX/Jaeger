@@ -61,11 +61,11 @@ namespace Grammar
     struct directive_asm : pegtl::if_must< pegtl::seq< pegtl::string< 'a', 's', 'm' >, whitespaces >, code_injection > {};
     struct directive_return : pegtl::if_must< pegtl::seq< pegtl::string< 'r', 'e', 't', 'u', 'r', 'n' >, whitespaces >, pegtl::string< 'p', 'l', 'a', 'c', 'e', 'm', 'e', 'n', 't' > > {};
     struct directive_set : pegtl::if_must< pegtl::seq< pegtl::string< 's', 'e', 't' >, whitespaces >, value, whitespaces, data > {};
-    struct directive_if_cond : pegtl::seq< data, whitespaces, pegtl::string< 't', 'h', 'e', 'n' >, whitespaces, Flags::store_expressions_stack, function_body > {};
-    struct directive_if_elif : pegtl::if_must< pegtl::seq< pegtl::string< 'e', 'l', 'i', 'f' >, whitespaces >, data, whitespaces, pegtl::string< 't', 'h', 'e', 'n' >, whitespaces, Flags::store_expressions_stack, function_body > {};
-    struct directive_if_else : pegtl::if_must< pegtl::seq< pegtl::string< 'e', 'l', 's', 'e' >, whitespaces >, data, whitespaces, pegtl::string< 't', 'h', 'e', 'n' >, whitespaces, Flags::store_expressions_stack, function_body > {};
+    struct directive_if_cond : pegtl::seq< data, whitespaces, pegtl::string< 't', 'h', 'e', 'n' >, whitespaces_any, pegtl::one< '[' >, whitespaces_any, Flags::store_expressions_stack, function_body, whitespaces_any, pegtl::one< ']' > > {};
+    struct directive_if_elif : pegtl::if_must< pegtl::seq< pegtl::string< 'e', 'l', 'i', 'f' >, whitespaces >, data, whitespaces, pegtl::string< 't', 'h', 'e', 'n' >, whitespaces_any, pegtl::one< '[' >, whitespaces_any, Flags::store_expressions_stack, function_body, whitespaces_any, pegtl::one< ']' > > {};
+    struct directive_if_else : pegtl::if_must< pegtl::seq< pegtl::string< 'e', 'l', 's', 'e' >, whitespaces >, pegtl::one< '[' >, whitespaces_any, Flags::store_expressions_stack, function_body, whitespaces_any, pegtl::one< ']' > > {};
     struct directive_if : pegtl::if_must< pegtl::seq< pegtl::string< 'i', 'f' >, whitespaces >, Flags::store_conditions_stack, directive_if_cond, pegtl::star< whitespaces, directive_if_elif >, pegtl::opt< whitespaces, directive_if_else > > {};
-    struct directive_while : pegtl::if_must< pegtl::seq< pegtl::string< 'w', 'h', 'i', 'l', 'e' >, whitespaces >, data , whitespaces, pegtl::string< 't', 'h', 'e', 'n' >, whitespaces, Flags::store_expressions_stack, function_body > {};
+    struct directive_while : pegtl::if_must< pegtl::seq< pegtl::string< 'w', 'h', 'i', 'l', 'e' >, whitespaces >, data , whitespaces, pegtl::string< 't', 'h', 'e', 'n' >, whitespaces_any, pegtl::one< '[' >, whitespaces_any, Flags::store_expressions_stack, function_body, whitespaces_any, pegtl::one< ']' > > {};
     struct directives_local : pegtl::if_must< pegtl::one< '/' >, whitespaces_any, pegtl::sor< directive_let, directive_asm, directive_return, directive_set, directive_if, directive_while >, whitespaces_any, pegtl::one< '/' > > {};
     struct data : pegtl::sor< function_call, constant_value, value > {};
     struct function_call_section : pegtl::seq< Flags::store_expressions_stack, pegtl::star< whitespaces_any, data > > {};

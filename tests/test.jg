@@ -45,20 +45,28 @@
 		"File content:" &
 		content
 		)
+	(fileSetContents pathTo content)
 
-	/if true then (roar "true") else (roar "false")/
-	###/set a 5/
-	/while (greater a 0) then
+	# compiler will optimize obvious checks so there will be just roarLine call.
+	/if true then [
+		(roarLine "true")
+	] else [
+		(roarLine "false")
+	]/
+
+	/if (less a 1) then [
+		(roarLine "a is less than 1!")
+	] elif (greater a 1) then [
+		(roarLine "a is greater than 1!")
+	] else [
+		(roarLine "a equals 1!")
+	]/
+
+	/set a 5/
+	/while (greater a 0) then [
 		(roarLine a)
 		/set a (sub a 1)/
-		/###
-	###(roar "Do you want to write a file? [true/false]: ")
-	/if (toBool (steal)) then
-		(fileSetContents pathTo content)
-		(roarLine "Done!")
-	else
-		(roarLine "Ok!")
-		/###
+	]/
 
 	# the very last expression is used as function result value.
 	(add a 5)

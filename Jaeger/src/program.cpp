@@ -473,6 +473,7 @@ Program::Condition::Condition( const std::vector< ConditionData >& c )
 : Expression( T_CONDITION )
 , conditions( c )
 {
+    m_uid = ++s_testUID;
 }
 
 Program::Condition::~Condition()
@@ -507,17 +508,34 @@ void Program::Condition::validate( Builder* builder, Program* program, Function*
         throw std::runtime_error( "In strict mode conditions are not allowed!" );
     if( conditions.empty() )
         throw std::runtime_error( "Condition without body detected!" );
-    for( auto& c : conditions )
+    for( auto c = conditions.begin(); c != conditions.end(); ++c )
     {
-        if( c.condition )
+        if( c->condition )
         {
-            if( c.condition->type != T_CONSTANT_BOOL)
-                throw std::runtime_error( "Condition test accepts only bool values!" );
-            c.condition->validate( builder, program, func );
-            if( c.condition->getResultType().empty() )
-                throw std::runtime_error( "Condition test does not allow for void-expressions!" );
+            c->condition->validate( builder, program, func );
+            if( c->condition->getResultType() != "Bool" )
+                throw std::runtime_error( "Condition test accepts only boolean values!" );
+            if( c->condition->type == T_CONSTANT_BOOL )
+            {
+                ConstantBool* b = (ConstantBool*)c->condition.get();
+                if( b->value )
+                {
+                    c->condition.reset();
+                    conditions.erase( c + 1, conditions.end() );
+                    for( auto& e : c->expressions )
+                        e->validate( builder, program, func );
+                    break;
+                }
+                else
+                {
+                    c = conditions.erase( c );
+                    for( auto& e : c->expressions )
+                        e->validate( builder, program, func );
+                    continue;
+                }
+            }
         }
-        for( auto& e : c.expressions )
+        for( auto& e : c->expressions )
             e->validate( builder, program, func );
     }
 }
@@ -529,17 +547,21 @@ void Program::Condition::assemble( std::ostream& output, bool dropValue )
         if( c.condition )
         {
             c.condition->assemble( output, false );
-            // TODO: need to somehow add temp variable to function vars list.
-            output << "" << std::endl;
+            output << "call @___TestBool___($stack) => $test;" << std::endl;
+            output << "jif $test %__conditionSuccess" << c.uid << " %__conditionFailure" << c.uid << ";" << std::endl;
+            output << "__conditionSuccess" << c.uid << ":" << std::endl;
+            for( auto& e : c.expressions )
+                e->assemble( output, true );
+            output << "goto %__conditionDone" << m_uid << ";" << std::endl;
+            output << "__conditionFailure" << c.uid << ":" << std::endl;
+        }
+        else
+        {
+            for( auto& e : c.expressions )
+                e->assemble( output, true );
         }
     }
-    /*data->assemble( output, false );
-    Value* v = (Value*)value.get();
-    std::stringstream ss;
-    ss << "$" << v->ids[0];
-    for( std::size_t i = 1, c = v->ids.size(); i < c; ++i )
-        ss << "->$" << v->ids[i];
-    output << "cpop $stack void => " << ss.str() << ";" << std::endl;*/
+    output << "__conditionDone" << m_uid << ":" << std::endl;
 }
 
 Program::Function::Function( const std::string& i, const std::string& t )
@@ -595,7 +617,10 @@ void Program::Function::validate( Builder* builder, Program* program )
     if( !returnPlacement && !constructor && !disposal && jaegerifiedId.empty() && !type.empty() && expressions.empty() )
         throw std::runtime_error( "Function: " + id + " must return value!" );
     if( !type.empty() && !expressions.empty() && expressions.back()->type != Expression::T_CONSTANT_NULL && expressions.back()->getResultType() != type )
-        throw std::runtime_error( "Function: " + id + " last expression type: " + expressions.back()->getResultType() + " does not match function type: " + type );
+    {
+        std::string t = expressions.back()->getResultType();
+        throw std::runtime_error( "Function: " + id + " last expression type: " + (t.empty() ? "void" : t) + " does not match function type: " + type );
+    }
 }
 
 void Program::Function::assemble( std::ostream& output, Program* program )
@@ -638,26 +663,18 @@ void Program::Function::assemble( std::ostream& output, Program* program )
         if( !nm )
             throw std::runtime_error( "Cannot assemble jaegerified function! There is no jaegerified compiled routine for: " + jaegerifiedId );
         output << "routine " << makeUID() << "(stack:i32):" << std::endl;
-        std::size_t i = args.size();
+        std::size_t i = 0;
         std::size_t j = 0;
-        if( i > 0 || !type.empty() )
+        output << "<test:i8";
+        if( !type.empty() )
+            output << ", result:*" << type << ", " << program->marshallField( "result", type, nm->type->makeUID() );
+        for( auto& a : args )
         {
-            output << "<";
-            if( !type.empty() )
-            {
-                output << "result:*" << type << ", " << program->marshallField( "result", type, nm->type->makeUID() );
-                if( i > 0 )
-                    output << ", ";
-            }
-            for( auto& a : args )
-            {
-                a->assemble( output );
-                output << ", " << program->marshallField( a, nm->args[j]->type->makeUID() );
-                if( --i )
-                    output << ", ";
-            }
-            output << ">" << std::endl;
+            output << ", ";
+            a->assemble( output );
+            output << ", " << program->marshallField( a, nm->args[j]->type->makeUID() );
         }
+        output << ">" << std::endl;
         output << "{" << std::endl;
         j = 0;
         for( std::vector< FieldPtr >::reverse_iterator it = args.rbegin(); it != args.rend(); ++it )
@@ -692,24 +709,19 @@ void Program::Function::assemble( std::ostream& output, Program* program )
     else
     {
         output << "routine " << makeUID() << "(stack:i32):" << std::endl;
-        std::size_t i = args.size() + vars.size();
-        if( i > 0 )
+        std::size_t i = 0;
+        output << "<test:i8";
+        for( auto& a : args )
         {
-            output << "<";
-            for( auto& a : args )
-            {
-                a->assemble( output );
-                if( --i )
-                    output << ", ";
-            }
-            for( auto& v : vars )
-            {
-                v->assemble( output );
-                if( --i )
-                    output << ", ";
-            }
-            output << ">" << std::endl;
+            output << ", ";
+            a->assemble( output );
         }
+        for( auto& v : vars )
+        {
+            output << ", ";
+            v->assemble( output );
+        }
+        output << ">" << std::endl;
         output << "{" << std::endl;
         for( std::vector< FieldPtr >::reverse_iterator it = args.rbegin(); it != args.rend(); ++it )
             output << "cpop $stack void => $" << it->get()->id << ";" << std::endl;
@@ -926,6 +938,16 @@ I4::CompilationStatePtr Program::assemble( Builder* builder, std::size_t stackSi
     ss << "mov void $value => $this->$value;" << std::endl;
     ss << "cpush $stack void $this;" << std::endl;
     ss << "};" << std::endl;
+    ss << std::endl;
+    ss << "routine ___TestBool___(stack:i32):i8" << std::endl;
+    ss << "<this:*Bool>" << std::endl;
+    ss << "{" << std::endl;
+    ss << "cpop $stack void => $this;" << std::endl;
+    ss << "ret $this->$value;" << std::endl;
+    ss << "}" << std::endl;
+    ss << "[{" << std::endl;
+    ss << "call @Bool_Unref($this, $stack) => $this;" << std::endl;
+    ss << "}];" << std::endl;
     ss << std::endl;
     ss << "routine ___CalculateStringLength___(value:*i8):i32" << std::endl;
     ss << "<pos:i32, char:i8>" << std::endl;
