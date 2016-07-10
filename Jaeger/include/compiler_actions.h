@@ -51,6 +51,14 @@ namespace CompilerActions
         }
     };
 
+    template<> struct actions< Grammar::Flags::store_conditions_stack >
+    {
+        static void apply( const pegtl::input& in, ProgramPtr& program )
+        {
+            program->storeConditions();
+        }
+    };
+
     template<> struct actions< Grammar::Flags::build_field_from_asm >
     {
         static void apply( const pegtl::input& in, ProgramPtr& program )
@@ -301,6 +309,46 @@ namespace CompilerActions
             program->buildVariableSet();
         }
     };
+
+    template<> struct actions< Grammar::directive_if >
+    {
+        static void apply( const pegtl::input& in, ProgramPtr& program )
+        {
+            program->buildIf();
+        }
+    };
+
+    template<> struct actions< Grammar::directive_if_cond >
+    {
+        static void apply( const pegtl::input& in, ProgramPtr& program )
+        {
+            program->buildCond();
+        }
+    };
+
+    template<> struct actions< Grammar::directive_if_elif >
+    {
+        static void apply( const pegtl::input& in, ProgramPtr& program )
+        {
+            program->buildElif();
+        }
+    };
+
+    template<> struct actions< Grammar::directive_if_else >
+    {
+        static void apply( const pegtl::input& in, ProgramPtr& program )
+        {
+            program->buildElse();
+        }
+    };
+
+    /*template<> struct actions< Grammar::directive_while >
+    {
+        static void apply( const pegtl::input& in, ProgramPtr& program )
+        {
+            program->buildWhile();
+        }
+    };*/
 
     template<> struct actions< Grammar::grammar_function_definition >
     {

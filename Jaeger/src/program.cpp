@@ -454,7 +454,6 @@ void Program::Set::validate( Builder* builder, Program* program, Function* func 
     data->validate( builder, program, func );
     if( data->getResultType().empty() )
         throw std::runtime_error( "Trying to perform set operation with void-expression!" );
-    data->validate( builder, program, func );
 }
 
 void Program::Set::assemble( std::ostream& output, bool dropValue )
@@ -466,6 +465,81 @@ void Program::Set::assemble( std::ostream& output, bool dropValue )
     for( std::size_t i = 1, c = v->ids.size(); i < c; ++i )
         ss << "->$" << v->ids[i];
     output << "cpop $stack void => " << ss.str() << ";" << std::endl;
+}
+
+std::size_t Program::Condition::s_testUID = 0;
+
+Program::Condition::Condition( const std::vector< ConditionData >& c )
+: Expression( T_CONDITION )
+, conditions( c )
+{
+}
+
+Program::Condition::~Condition()
+{
+}
+
+void Program::Condition::write( std::ostream& output, std::size_t level )
+{
+    std::string lvl( level, '-' );
+    output << lvl << "Condition" << std::endl;
+    output << lvl << ":type " << type << std::endl;
+    for( auto& c : conditions )
+    {
+        output << lvl << "-Stage" << std::endl;
+        if( c.condition )
+        {
+            output << lvl << "--Test" << std::endl;
+            c.condition->write( output, level + 3 );
+        }
+        output << lvl << "--Expressions" << std::endl;
+        for( auto& e : c.expressions )
+            e->write( output, level + 4 );
+    }
+}
+
+void Program::Condition::validate( Builder* builder, Program* program, Function* func )
+{
+    if( isValidated )
+        return;
+    isValidated = true;
+    if( program->isStrict() )
+        throw std::runtime_error( "In strict mode conditions are not allowed!" );
+    if( conditions.empty() )
+        throw std::runtime_error( "Condition without body detected!" );
+    for( auto& c : conditions )
+    {
+        if( c.condition )
+        {
+            if( c.condition->type != T_CONSTANT_BOOL)
+                throw std::runtime_error( "Condition test accepts only bool values!" );
+            c.condition->validate( builder, program, func );
+            if( c.condition->getResultType().empty() )
+                throw std::runtime_error( "Condition test does not allow for void-expressions!" );
+        }
+        for( auto& e : c.expressions )
+            e->validate( builder, program, func );
+    }
+}
+
+void Program::Condition::assemble( std::ostream& output, bool dropValue )
+{
+    for( auto& c : conditions )
+    {
+        if( c.condition )
+        {
+            c.condition->assemble( output, false );
+            // TODO: need to somehow add temp variable to function vars list.
+            output << "" << std::endl;
+        }
+    }
+    /*data->assemble( output, false );
+    Value* v = (Value*)value.get();
+    std::stringstream ss;
+    ss << "$" << v->ids[0];
+    for( std::size_t i = 1, c = v->ids.size(); i < c; ++i )
+        ss << "->$" << v->ids[i];
+    output << "cpop $stack void => " << ss.str() << ";" << std::endl;*/
 }
 
 Program::Function::Function( const std::string& i, const std::string& t )
@@ -1158,6 +1232,20 @@ std::size_t Program::restoreExpressions()
     return p;
 }
 
+void Program::storeConditions()
+{
+    m_conditionsPositions.push( m_conditions.size() );
+}
+
+std::size_t Program::restoreConditions()
+{
+    if( m_conditionsPositions.empty() )
+        throw std::runtime_error( "Cannot restore conditions position - conditions positions stack is empty!" );
+    std::size_t p = m_conditionsPositions.top();
+    m_conditionsPositions.pop();
+    return p;
+}
+
 void Program::buildStructure()
 {
     std::string id = load();
@@ -1403,4 +1491,65 @@ void Program::buildVariableSet()
     ExpressionPtr v = m_builtExpressions.back();
     m_builtExpressions.pop_back();
     m_builtExpressions.push_back( ExpressionPtr( new Set( v, d ) ) );
+}
+
+void Program::buildIf()
+{
+    std::vector< ConditionData > cond;
+    std::size_t p = restoreConditions();
+    for( std::size_t i = p; i < m_conditions.size(); ++i )
+        cond.push_back( m_conditions[i] );
+    while( m_conditions.size() > p )
+        m_conditions.pop_back();
+    m_builtExpressions.push_back( ExpressionPtr( new Condition( cond ) ) );
+}
+
+void Program::buildCond()
+{
+    std::vector< ExpressionPtr > exp;
+    std::size_t p = restoreExpressions();
+    for( std::size_t i = p; i < m_builtExpressions.size(); ++i )
+        exp.push_back( m_builtExpressions[i] );
+    while( m_builtExpressions.size() > p )
+        m_builtExpressions.pop_back();
+    if( m_builtExpressions.size() < 1 )
+        throw std::runtime_error( "Cannot obtain condition test value!" );
+    ConditionData data;
+    data.uid = ++Condition::s_testUID;
+    data.condition = m_builtExpressions.back();
+    m_builtExpressions.pop_back();
+    data.expressions = exp;
+    m_conditions.push_back( data );
+}
+
+void Program::buildElif()
+{
+    std::vector< ExpressionPtr > exp;
+    std::size_t p = restoreExpressions();
+    for( std::size_t i = p; i < m_builtExpressions.size(); ++i )
+        exp.push_back( m_builtExpressions[i] );
+    while( m_builtExpressions.size() > p )
+        m_builtExpressions.pop_back();
+    if( m_builtExpressions.size() < 1 )
+        throw std::runtime_error( "Cannot obtain condition test value!" );
+    ConditionData data;
+    data.uid = ++Condition::s_testUID;
+    data.condition = m_builtExpressions.back();
+    m_builtExpressions.pop_back();
+    data.expressions = exp;
+    m_conditions.push_back( data );
+}
+
+void Program::buildElse()
+{
+    std::vector< ExpressionPtr > exp;
+    std::size_t p = restoreExpressions();
+    for( std::size_t i = p; i < m_builtExpressions.size(); ++i )
+        exp.push_back( m_builtExpressions[i] );
+    while( m_builtExpressions.size() > p )
+        m_builtExpressions.pop_back();
+    ConditionData data;
+    data.uid = ++Condition::s_testUID;
+    data.expressions = exp;
+    m_conditions.push_back( data );
 }

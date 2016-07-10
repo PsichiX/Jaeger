@@ -47,6 +47,11 @@
 		)
 
 	/if true then (roar "true") else (roar "false")/
+	###/set a 5/
+	/while (greater a 0) then
+		(roarLine a)
+		/set a (sub a 1)/
+		/###
 	###(roar "Do you want to write a file? [true/false]: ")
 	/if (toBool (steal)) then
 		(fileSetContents pathTo content)

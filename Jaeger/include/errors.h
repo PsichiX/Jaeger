@@ -36,7 +36,7 @@ namespace Errors
     template<> const std::string control< pegtl::internal::until< pegtl::internal::eolf > >::errorMessage = "expected to consume characters up to end of line feed";
     template<> const std::string control< pegtl::sor< Grammar::directive_strict, Grammar::directive_import, Grammar::directive_start, Grammar::directive_jaegerify, Grammar::directive_marshal, Grammar::directive_asm_global > >::errorMessage = "expected one of directives: import, start, jaegerify, marshal, asm";
     template<> const std::string control< pegtl::one< '/' > >::errorMessage = "expected `/` character";
-    template<> const std::string control< pegtl::sor< Grammar::directive_let, Grammar::directive_asm, Grammar::directive_return, Grammar::directive_set > >::errorMessage = "expected one of directives: let, asm, return, set";
+    template<> const std::string control< pegtl::sor< Grammar::directive_let, Grammar::directive_asm, Grammar::directive_return, Grammar::directive_set, Grammar::directive_if, Grammar::directive_while > >::errorMessage = "expected one of directives: let, asm, return, set, if, while";
     template<> const std::string control< Grammar::String::escaped >::errorMessage = "expected escaped string character";
     template<> const std::string control< Grammar::identifier_saved >::errorMessage = "expected identifier";
     template<> const std::string control< pegtl::xdigit >::errorMessage = "expected hexadecimal digit character";
@@ -65,9 +65,16 @@ namespace Errors
     template<> const std::string control< pegtl::sor< Grammar::directive_marshal_assembly_jaeger, Grammar::directive_marshal_jaeger_assembly > >::errorMessage = "expected either assembly-to-jaeger or jaeger-to-assembly marshalling";
     template<> const std::string control< Grammar::value >::errorMessage = "expected value sequence";
     template<> const std::string control< Grammar::data >::errorMessage = "expected value data expression";
+    template<> const std::string control< pegtl::string< 't', 'h', 'e', 'n' > >::errorMessage = "expected `then` keyword";
+    template<> const std::string control< pegtl::string< 'e', 'l', 'i', 'f' > >::errorMessage = "expected `elif` keyword";
+    template<> const std::string control< pegtl::string< 'e', 'l', 's', 'e' > >::errorMessage = "expected `else` keyword";
+    template<> const std::string control< Grammar::directive_if_cond >::errorMessage = "expected condition statement";
+    template<> const std::string control< pegtl::star< Grammar::whitespaces, Grammar::directive_if_elif > >::errorMessage = "expected optional list of `elif` statements";
+    template<> const std::string control< pegtl::opt< Grammar::whitespaces, Grammar::directive_if_else > >::errorMessage = "expected optional `else` statement";
     template<> const std::string control< pegtl::eof >::errorMessage = "expected end of file character";
     template<> const std::string control< pegtl::success >::errorMessage = "expected dummy success";
     template<> const std::string control< Grammar::Flags::store_expressions_stack >::errorMessage = "expected flag: store expressions stack";
+    template<> const std::string control< Grammar::Flags::store_conditions_stack >::errorMessage = "expected flag: store conditions stack";
     template<> const std::string control< Grammar::Flags::push_sections_target >::errorMessage = "expected flag: push sections target";
 }
 

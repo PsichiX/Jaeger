@@ -18,6 +18,7 @@ class Program
 {
 public:
     class Function;
+    struct ConditionData;
 
     class Validated
     {
@@ -75,7 +76,8 @@ public:
             T_VALUE,
             T_FUNCTION_CALL,
             T_ASM,
-            T_SET
+            T_SET,
+            T_CONDITION
         };
 
         Expression( Type t );
@@ -235,6 +237,23 @@ public:
 
     typedef std::shared_ptr< Set > SetPtr;
 
+    class Condition : public Expression
+    {
+    public:
+        static std::size_t s_testUID;
+
+        Condition( const std::vector< ConditionData >& c );
+        virtual ~Condition();
+
+        virtual void write( std::ostream& output, std::size_t level );
+        virtual void validate( Builder* builder, Program* program, Function* func );
+        virtual void assemble( std::ostream& output, bool dropValue );
+
+        std::vector< ConditionData > conditions;
+    };
+
+    typedef std::shared_ptr< Condition > ConditionPtr;
+
     class Function : public Validated
     {
     public:
@@ -278,6 +297,13 @@ public:
         std::string assembly;
     };
 
+    struct ConditionData
+    {
+        std::size_t uid;
+        ExpressionPtr condition;
+        std::vector< ExpressionPtr > expressions;
+    };
+
     Program();
     ~Program();
 
@@ -309,6 +335,8 @@ public:
     std::size_t restore();
     void storeExpressions();
     std::size_t restoreExpressions();
+    void storeConditions();
+    std::size_t restoreConditions();
     void buildStructure();
     void buildField();
     void buildFieldFromAsm();
@@ -330,6 +358,10 @@ public:
     void buildMarshalFromAssembly();
     void buildMarshalToAssembly();
     void buildVariableSet();
+    void buildIf();
+    void buildCond();
+    void buildElif();
+    void buildElse();
 
     std::string startFunction;
     std::vector< std::string > imports;
@@ -353,6 +385,8 @@ private:
     bool m_returnPlacement;
     std::string m_lastFunctionDefinition;
     std::map< std::string, I4::CompilationState::RoutinePtr > m_nativeModules;
+    std::vector< ConditionData > m_conditions;
+    std::stack< std::size_t > m_conditionsPositions;
 };
 
 typedef std::shared_ptr< Program > ProgramPtr;
