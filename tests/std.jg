@@ -1,0 +1,391 @@
+###
+	Native modules
+###
+
+/jaegerify ~~
+	routine print(format:*i8, ...):
+	~~ from IO/
+
+/jaegerify ~~
+	routine file_open(path:*i8, mode:*i8):*i32
+	~~ as [fileOpen Handle <path String> <mode String>] from IO/
+
+/jaegerify ~~
+	routine file_close(handle:*i32):
+	~~ as [fileClose <handle Handle>] from IO/
+
+/jaegerify ~~
+	routine file_size(handle:*i32):i32
+	~~ as [fileSize Int <handle Handle>] from IO/
+
+/jaegerify ~~
+	routine file_read_all(handle:*i32, buffer:*i8, size:i32):i32
+	~~ from IO/
+
+/jaegerify ~~
+	routine file_write_all(handle:*i32, buffer:*i8, size:i32):i32
+	~~ from IO/
+
+###
+	Int
+###
+
+{Int
+	~~ value:i32 ~~
+}
+
+[Int Int
+	/let <this Int>/
+	/asm ~~
+		call @Int_new() => $this;
+		mov void 0:i32 => $this->$value;
+		~~/
+	this
+]
+
+###
+	Float
+###
+
+{Float
+	~~ value:f32 ~~
+}
+
+[Float Float
+	/let <this Float>/
+	/asm ~~
+		call @Float_new() => $this;
+		mov void 0:f32 => $this->$value;
+		~~/
+	this
+]
+
+###
+	String
+###
+
+{String
+	~~ buffer:*i8 ~~
+	~~ length:i32 ~~
+}
+
+[String String
+	/let <this String>/
+	/asm ~~
+		call @String_new() => $this;
+		mov void null => $this->$buffer;
+		mov void 0:i32 => $this->$length;
+		~~/
+	this
+]
+
+[String_Dispose <this String>
+	/let ~~ isnil:i8 ~~/
+	/asm ~~
+		nil $this->$buffer => $isnil;
+		jif $isnil %success %failure;
+		success:
+		del $this->$buffer;
+		failure:
+		~~/
+]
+
+###
+	Bool
+###
+
+{Bool
+	~~ value:i8 ~~
+}
+
+[Bool Bool
+	/let <this Bool>/
+	/asm ~~
+		call @Bool_new() => $this;
+		mov void 0:i8 => $this->$value;
+		~~/
+	this
+]
+
+###
+	Handle
+###
+
+{Handle
+	~~ value:i32 ~~
+}
+
+[Handle Handle
+	/let <this Handle>/
+	/asm ~~
+		call @Handle_new() => $this;
+		mov void 0:i32 => $this->$value;
+		~~/
+	this
+]
+
+###
+	Number arithmetics
+###
+
+[add Int <a Int> <b Int>
+	/let <r Int>/
+	/set r (Int)/
+	/asm ~~
+		add void $a->$value $b->$value => $r->$value;
+		~~/
+	r
+]
+
+[sub Int <a Int> <b Int>
+	/let <r Int>/
+	/set r (Int)/
+	/asm ~~
+		sub void $a->$value $b->$value => $r->$value;
+		~~/
+	r
+]
+
+[mul Int <a Int> <b Int>
+	/let <r Int>/
+	/set r (Int)/
+	/asm ~~
+		mul void $a->$value $b->$value => $r->$value;
+		~~/
+	r
+]
+
+[div Int <a Int> <b Int>
+	/let <r Int>/
+	/set r (Int)/
+	/asm ~~
+		div void $a->$value $b->$value => $r->$value;
+		~~/
+	r
+]
+
+[add Float <a Float> <b Float>
+	/let <r Float>/
+	/set r (Float)/
+	/asm ~~
+		add void $a->$value $b->$value => $r->$value;
+		~~/
+	r
+]
+
+[sub Float <a Float> <b Float>
+	/let <r Float>/
+	/set r (Float)/
+	/asm ~~
+		sub void $a->$value $b->$value => $r->$value;
+		~~/
+	r
+]
+
+[mul Float <a Float> <b Float>
+	/let <r Float>/
+	/set r (Float)/
+	/asm ~~
+		mul void $a->$value $b->$value => $r->$value;
+		~~/
+	r
+]
+
+[div Float <a Float> <b Float>
+	/let <r Float>/
+	/set r (Float)/
+	/asm ~~
+		div void $a->$value $b->$value => $r->$value;
+		~~/
+	r
+]
+
+[add Handle <a Handle> <b Handle>
+	/let <r Handle>/
+	/set r (Handle)/
+	/asm ~~
+		add void $a->$value $b->$value => $r->$value;
+		~~/
+	r
+]
+
+[sub Handle <a Handle> <b Handle>
+	/let <r Handle>/
+	/set r (Handle)/
+	/asm ~~
+		sub void $a->$value $b->$value => $r->$value;
+		~~/
+	r
+]
+
+[mul Handle <a Handle> <b Handle>
+	/let <r Handle>/
+	/set r (Handle)/
+	/asm ~~
+		mul void $a->$value $b->$value => $r->$value;
+		~~/
+	r
+]
+
+[div Handle <a Handle> <b Handle>
+	/let <r Handle>/
+	/set r (Handle)/
+	/asm ~~
+		div void $a->$value $b->$value => $r->$value;
+		~~/
+	r
+]
+
+###
+	String manipulation
+###
+
+[concat String <a String> <b String>
+	/let
+		<r String>
+		~~ len:i32 ~~
+		~~ ptr:*i8 ~~
+		/
+	/set r (String)/
+	(String_Dispose r)
+	/asm ~~
+		add void $a->$length $b->$length => $r->$length;
+		add void $r->$length 1:i32 => $len;
+		new i8 $len => $r->$buffer;
+		add void 1:i32 $a->$length => $len;
+		movb i8 $len $a->$buffer => $r->$buffer;
+		add void $r->$buffer $a->$length => $ptr;
+		add void 1:i32 $b->$length => $len;
+		movb i8 $len $b->$buffer => $ptr;
+		~~/
+	r
+]
+
+###
+	IO manipulation
+###
+
+[roar <v Int>
+	/asm ~~
+		call @print("${i32}":*i8, $v->$value);
+		~~/
+]
+
+[roar <v Float>
+	/asm ~~
+		call @print("${f32}":*i8, $v->$value);
+		~~/
+]
+
+[roar <v String>
+	/asm ~~
+		call @print($v->$buffer);
+		~~/
+]
+
+[roar <v Bool>
+	/asm ~~
+		jif $v->$value %true %false;
+		true:
+		call @print("true":*i8);
+		goto %done;
+		false:
+		call @print("false":*i8);
+		done:
+		~~/
+]
+
+[roar <v Handle>
+	/asm ~~
+		call @print("#${i32}\n":*i8, $v->$value);
+		~~/
+]
+
+[roarLine <v Int>
+	/asm ~~
+		call @print("${i32}\n":*i8, $v->$value);
+		~~/
+]
+
+[roarLine <v Float>
+	/asm ~~
+		call @print("${f32}\n":*i8, $v->$value);
+		~~/
+]
+
+[roarLine <v String>
+	/asm ~~
+		call @print("${*}\n":*i8, $v->$buffer);
+		~~/
+]
+
+[roarLine <v Bool>
+	/asm ~~
+		jif $v->$value %true %false;
+		true:
+		call @print("true\n":*i8);
+		goto %done;
+		false:
+		call @print("false\n":*i8);
+		done:
+		~~/
+]
+
+[roarLine <v Handle>
+	/asm ~~
+		call @print("#${i32}\n":*i8, $v->$value);
+		~~/
+]
+
+[fileReadAll String <handle Handle>
+	/let
+		<result String>
+		~~ length:i32 ~~
+		~~ size:i32 ~~
+		~~ address:*i32 ~~
+		~~ buffer:*i8 ~~
+		/
+	/set result (String)/
+	(String_Dispose result)
+	/asm ~~
+		conv $handle->$value => $address;
+		call @file_size($address) => $length;
+		add void $length 1:i32 => $size;
+		new i8 $size => $buffer;
+		call @file_read_all($address, $buffer, $length) => $size;
+		mov void $buffer => $result->$buffer;
+		mov void $size => $result->$length;
+		add void $buffer $size => $buffer;
+		movb i8 1:i32 "":*i8 => $buffer;
+		~~/
+	result
+]
+
+[fileWriteAll <handle Handle> <content String>
+	/let
+		~~ size:i32 ~~
+		~~ address:*i32 ~~
+		/
+	/asm ~~
+		conv $handle->$value => $address;
+		call @file_write_all($address, $content->$buffer, $content->$length) => $size;
+		~~/
+]
+
+[fileGetContents String <path String>
+	/let
+		<file Handle>
+		<result String>
+		/
+	/set file (fileOpen path "r")/
+	/set result (fileReadAll file)/
+	(fileClose file)
+	result
+]
+
+[fileSetContents <path String> <content String>
+	/let <file Handle>/
+	/set file (fileOpen path "w")/
+	(fileWriteAll file content)
+	(fileClose file)
+]

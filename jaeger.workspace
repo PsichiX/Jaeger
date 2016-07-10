@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_workspace_file>
+	<Workspace title="Jaeger Workspace">
+		<Project filename="Jaeger/Jaeger.cbp" />
+		<Project filename="tool/tool.cbp" />
+		<Project filename="../Intuicio4/I4Tool/I4Tool.cbp" />
+	</Workspace>
+</CodeBlocks_workspace_file>

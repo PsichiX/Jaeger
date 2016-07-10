@@ -1,0 +1,10 @@
+Thumbs.db
+obj/
+bin/
+*.suo
+*.o
+*.cscope_file_list
+*.depend
+*.layout
+tests/*.i4s
+build/output/

@@ -1,0 +1,15 @@
+#!/usr/bin/env jaeger
+
+# structure definition.
+{Person
+	# field name with type.
+	<age Int>
+	<weight Float>
+	<name String>
+}
+
+[Person_Constructor <this Person> <age Int> <weight Float> <name String>
+	/set this.age age/
+	/set this.weight weight/
+	/set this.name name/
+]
