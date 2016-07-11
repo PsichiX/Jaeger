@@ -342,13 +342,13 @@ namespace CompilerActions
         }
     };
 
-    /*template<> struct actions< Grammar::directive_while >
+    template<> struct actions< Grammar::directive_while >
     {
         static void apply( const pegtl::input& in, ProgramPtr& program )
         {
             program->buildWhile();
         }
-    };*/
+    };
 
     template<> struct actions< Grammar::grammar_function_definition >
     {

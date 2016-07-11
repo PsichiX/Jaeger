@@ -58,8 +58,10 @@
 		(roarLine "a is less than 1!")
 	] elif (greater a 1) then [
 		(roarLine "a is greater than 1!")
-	] else [
+	] elif (equals a 1) then [
 		(roarLine "a equals 1!")
+	] else [
+		(roarLine "WTF!")
 	]/
 
 	/set a 5/

@@ -42,6 +42,7 @@ private:
     bool m_printPST;
     std::size_t m_stackSize;
     std::string m_asmOutput;
+    bool m_profile;
 };
 
 #endif

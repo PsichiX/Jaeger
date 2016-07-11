@@ -19,6 +19,7 @@ int main( int argc, char* argv[] )
     std::string arg;
     std::string intuicioPath = "intuicio";
     std::string jaegerPreprocessorPath = "I4Jaeger";
+    bool profile = false;
     std::vector< std::string > a;
     for( int i = 1; i < argc; ++i )
     {
@@ -31,16 +32,15 @@ int main( int argc, char* argv[] )
                 system( "intuicio -v" );
                 return 0;
             }
-            #ifdef DEBUG
             else if( arg == "-ip" || arg == "--intuicio-path" )
                 argMode = AM_INTUICIO_PATH;
             else if( arg == "-jpp" || arg == "--jaeger-preprocessor-path" )
                 argMode = AM_JAEGER_PREPROCESSOR_PATH;
-            #endif
+            else if( arg == "-p" || arg == "--profile" )
+                profile = true;
             else
                 a.push_back( arg );
         }
-        #ifdef DEBUG
         else if( argMode == AM_INTUICIO_PATH )
         {
             intuicioPath = arg;
@@ -51,12 +51,11 @@ int main( int argc, char* argv[] )
             jaegerPreprocessorPath = arg;
             argMode = AM_NONE;
         }
-        #endif
     }
     std::stringstream ss;
-    ss << intuicioPath << " -epp " << jaegerPreprocessorPath << " --";
+    ss << intuicioPath << ( profile ? " --profile" : "" ) << " -epp " << jaegerPreprocessorPath << ( profile ? " --profile" : "" ) << " --";
     for( auto& v : a )
         ss << " " << v;
-    ss << " -ep I4Run -mcs 8";
+    ss << " -ep I4Run -mcs 8" << ( profile ? " --profile" : "" );
     return system( ss.str().c_str() );
 }

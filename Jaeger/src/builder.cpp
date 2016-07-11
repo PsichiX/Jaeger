@@ -7,10 +7,12 @@
 #include <exception>
 #include <regex>
 #include <fstream>
+#include <chrono>
 
 Builder::Builder( const std::vector< std::string >& args )
 : m_printPST( false )
 , m_stackSize( 8192 )
+, m_profile( false )
 {
     ArgMode argMode = AM_NONE;
     std::vector< std::string > sourceDirs;
@@ -26,6 +28,8 @@ Builder::Builder( const std::vector< std::string >& args )
                 argMode = AM_STACK_SIZE;
             else if( arg == "-ao" || arg == "--asm-output" )
                 argMode = AM_ASM_OUTPUT;
+            else if( arg == "-r" || arg == "--profile" )
+                m_profile = true;
         }
         else if( argMode == AM_SOURCE_DIR )
         {
@@ -175,13 +179,35 @@ Program::FunctionPtr Builder::makeFunction( const std::string& content )
 
 I4::CompilationStatePtr Builder::buildCompilationState( const std::string& inputPath )
 {
-    ProgramPtr program = buildProgram( inputPath );
-    if( !program )
+    if( m_profile )
     {
-        std::cout << "Cannot build program from: " << inputPath << std::endl;
-        return nullptr;
+        auto start = std::chrono::high_resolution_clock::now();
+        ProgramPtr program = buildProgram( inputPath );
+        auto end = std::chrono::high_resolution_clock::now();
+        auto ms = std::chrono::duration_cast< std::chrono::milliseconds >( end - start ).count();
+        std::cout << "Jaeger program built in " << ms << "ms!" << std::endl;
+        if( !program )
+        {
+            std::cout << "Cannot build program from: " << inputPath << std::endl;
+            return nullptr;
+        }
+        start = std::chrono::high_resolution_clock::now();
+        auto result = program->assemble( this, m_stackSize );
+        end = std::chrono::high_resolution_clock::now();
+        ms = std::chrono::duration_cast< std::chrono::milliseconds >( end - start ).count();
+        std::cout << "Jaeger program assembled in " << ms << "ms!" << std::endl;
+        return result;
     }
-    return program->assemble( this, m_stackSize );
+    else
+    {
+        ProgramPtr program = buildProgram( inputPath );
+        if( !program )
+        {
+            std::cout << "Cannot build program from: " << inputPath << std::endl;
+            return nullptr;
+        }
+        return program->assemble( this, m_stackSize );
+    }
 }
 
 void Builder::writeAsmToFile( const std::string& content )

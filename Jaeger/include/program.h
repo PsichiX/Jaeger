@@ -77,7 +77,8 @@ public:
             T_FUNCTION_CALL,
             T_ASM,
             T_SET,
-            T_CONDITION
+            T_CONDITION,
+            T_WHILE
         };
 
         Expression( Type t );
@@ -257,6 +258,27 @@ public:
 
     typedef std::shared_ptr< Condition > ConditionPtr;
 
+    class While : public Expression
+    {
+    public:
+        static std::size_t s_testUID;
+
+        While( const ExpressionPtr& c, const std::vector< ExpressionPtr >& e );
+        virtual ~While();
+
+        virtual void write( std::ostream& output, std::size_t level );
+        virtual void validate( Builder* builder, Program* program, Function* func );
+        virtual void assemble( std::ostream& output, bool dropValue );
+
+        ExpressionPtr condition;
+        std::vector< ExpressionPtr > expressions;
+
+    private:
+        std::size_t m_uid;
+    };
+
+    typedef std::shared_ptr< While > WhilePtr;
+
     class Function : public Validated
     {
     public:
@@ -365,6 +387,7 @@ public:
     void buildCond();
     void buildElif();
     void buildElse();
+    void buildWhile();
 
     std::string startFunction;
     std::vector< std::string > imports;

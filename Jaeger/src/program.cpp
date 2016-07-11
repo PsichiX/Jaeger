@@ -564,6 +564,63 @@ void Program::Condition::assemble( std::ostream& output, bool dropValue )
     output << "__conditionDone" << m_uid << ":" << std::endl;
 }
 
+std::size_t Program::While::s_testUID = 0;
+
+Program::While::While( const ExpressionPtr& c, const std::vector< ExpressionPtr >& e )
+: Expression( T_WHILE )
+, condition( c )
+, expressions( e )
+{
+    m_uid = ++s_testUID;
+}
+
+Program::While::~While()
+{
+}
+
+void Program::While::write( std::ostream& output, std::size_t level )
+{
+    std::string lvl( level, '-' );
+    output << lvl << "While" << std::endl;
+    output << lvl << ":type " << type << std::endl;
+    if( condition )
+        condition->write( output, level + 1 );
+    output << lvl << "-Expressions" << std::endl;
+    for( auto& e : expressions )
+            e->write( output, level + 2 );
+}
+
+void Program::While::validate( Builder* builder, Program* program, Function* func )
+{
+    if( isValidated )
+        return;
+    isValidated = true;
+    if( program->isStrict() )
+        throw std::runtime_error( "In strict mode while-loops are not allowed!" );
+    if( !condition )
+        throw std::runtime_error( "Trying to get non-existing condition value!" );
+    condition->validate( builder, program, func );
+    if( condition->getResultType() != "Bool" )
+        throw std::runtime_error( "While-loop test accepts only boolean values!" );
+    if( condition->type == T_CONSTANT_BOOL && !((ConstantBool*)condition.get())->value )
+        throw std::runtime_error( "Always false while-loop test detected!" );
+    for( auto& e : expressions )
+        e->validate( builder, program, func );
+}
+
+void Program::While::assemble( std::ostream& output, bool dropValue )
+{
+    output << "__whileTest" << m_uid << ":" << std::endl;
+    condition->assemble( output, false );
+    output << "call @___TestBool___($stack) => $test;" << std::endl;
+    output << "jif $test %__whileStep" << m_uid << " %__whileDone" << m_uid << ";" << std::endl;
+    output << "__whileStep" << m_uid << ":" << std::endl;
+    for( auto& e : expressions )
+        e->assemble( output, true );
+    output << "goto %__whileTest" << m_uid << ";" << std::endl;
+    output << "__whileDone" << m_uid << ":" << std::endl;
+}
+
 Program::Function::Function( const std::string& i, const std::string& t )
 : id( i )
 , type( t )
@@ -1574,4 +1631,19 @@ void Program::buildElse()
     data.uid = ++Condition::s_testUID;
     data.expressions = exp;
     m_conditions.push_back( data );
+}
+
+void Program::buildWhile()
+{
+    std::vector< ExpressionPtr > exp;
+    std::size_t p = restoreExpressions();
+    for( std::size_t i = p; i < m_builtExpressions.size(); ++i )
+        exp.push_back( m_builtExpressions[i] );
+    while( m_builtExpressions.size() > p )
+        m_builtExpressions.pop_back();
+    if( m_builtExpressions.size() < 1 )
+        throw std::runtime_error( "Cannot obtain loop test value!" );
+    auto t = m_builtExpressions.back();
+    m_builtExpressions.pop_back();
+    m_builtExpressions.push_back( ExpressionPtr( new While( t, exp ) ) );
 }

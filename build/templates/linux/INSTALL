@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+if [[ $EUID -ne 0 ]]; then
+	echo "This script must be run as root!" 1>&2
+	exit 1
+fi
+
+echo "Uninstall previous version..."
+rm /usr/bin/jaeger
+rm -r /usr/lib/jaeger
+
+echo "Install Jaeger binaries..."
+mkdir /usr/lib/jaeger/
+cp -r ./bin /usr/lib/jaeger/bin
+chmod +x /usr/lib/jaeger/bin/jaeger
+ln -s /usr/lib/jaeger/bin/jaeger /usr/bin/jaeger
+
+echo "Done! Now you can remove installation files."
+exit 0
