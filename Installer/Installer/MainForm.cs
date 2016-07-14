@@ -84,6 +84,11 @@ namespace Installer
                 if (!path.Split(';').Contains(installationPath))
                     Environment.SetEnvironmentVariable("PATH", path + ";" + installationPath, EnvironmentVariableTarget.Machine);
             }
+            if (registerStdCheckBox.Checked)
+            {
+                var stdPath = Path.Combine(Path.GetFullPath(pathTextBox.Text), "std") + Path.DirectorySeparatorChar;
+                Environment.SetEnvironmentVariable("JAEGER_STD", stdPath, EnvironmentVariableTarget.Machine);
+            }
             if (associateFileTypesCheckBox.Checked)
             {
                 var bin = Path.Combine(Path.GetFullPath(pathTextBox.Text), "jaeger.exe");

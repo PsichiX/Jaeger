@@ -14,6 +14,7 @@ mkdir /usr/lib/jaeger/
 cp -r ./bin /usr/lib/jaeger/bin
 chmod +x /usr/lib/jaeger/bin/jaeger
 ln -s /usr/lib/jaeger/bin/jaeger /usr/bin/jaeger
+cp -r ./std /usr/lib/jaeger/std
 
 echo "Done! Now you can remove installation files."
 exit 0

@@ -23,6 +23,7 @@ public:
     ~Builder();
 
     bool canWriteAsmToFile() { return !m_asmOutput.empty(); }
+    bool canProfile() { return m_profile; }
 
     void pushDirectory( const std::string& path );
     void popDirectory();

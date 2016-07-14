@@ -4,6 +4,21 @@
 /start main/
 # `import` directive put code from file into program.
 /import "std.jg"/
+###
+[main Int
+	(roarLine "WTF")
+	0
+]
+###
+
+[countdown <v Int>
+	/while (greater v 0) then [
+		(roar "Coroutine: " & v & "\n")
+		/set v (sub v 1)/
+		#/yield/
+	]/
+	(roarLine "Kaboom!")
+]
 
 # function called at program startup.
 # it must return integer value which is exit code (0 means success).
@@ -64,12 +79,8 @@
 		(roarLine "WTF!")
 	]/
 
-	/set a 5/
-	/while (greater a 0) then [
-		(roarLine a)
-		/set a (sub a 1)/
-	]/
+	(countdown 5)
 
 	# the very last expression is used as function result value.
-	(add a 5)
+	0
 ]

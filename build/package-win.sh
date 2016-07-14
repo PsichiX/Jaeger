@@ -13,6 +13,8 @@ mkdir ${FILEPATH}/installation-dir
 cp ../Jaeger/bin/Win/Release/I4Jaeger.dll ${FILEPATH}/installation-dir/
 cp ../tool/bin/Win/Release/jaeger.exe ${FILEPATH}/installation-dir/
 cp templates/win/shebang.exe ${FILEPATH}/installation-dir/
+mkdir ${FILEPATH}/installation-dir/std
+cp ../tests/std.jg ${FILEPATH}/installation-dir/std/
 
 echo "Make package archive..."
 mkdir output

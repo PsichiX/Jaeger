@@ -10,6 +10,8 @@ cp templates/linux/INSTALL ${FILEPATH}/
 mkdir ${FILEPATH}/bin
 cp ../Jaeger/bin/Linux/Release/I4Jaeger.so ${FILEPATH}/bin/
 cp ../tool/bin/Linux/Release/jaeger ${FILEPATH}/bin/
+mkdir ${FILEPATH}/std
+cp ../tests/std.jg ${FILEPATH}/std/
 
 echo "Make package archive..."
 mkdir output

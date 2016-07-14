@@ -3,6 +3,7 @@
 #include "../include/std_extension.h"
 #include <iostream>
 #include <algorithm>
+#include <chrono>
 
 Program::Field::Field( const std::string& i, const std::string& t )
 : id( i )
@@ -952,6 +953,7 @@ void Program::validate( Builder* builder )
 
 I4::CompilationStatePtr Program::assemble( Builder* builder, std::size_t stackSize )
 {
+    auto start = std::chrono::high_resolution_clock::now();
     std::stringstream ss;
     ss << "#!/usr/bin/env i4s" << std::endl;
     ss << std::endl;
@@ -1048,6 +1050,12 @@ I4::CompilationStatePtr Program::assemble( Builder* builder, std::size_t stackSi
         ss << "call @Int_Unref($result, $stack) => $result;" << std::endl;
         ss << "ctxd $stack;" << std::endl;
         ss << "}];" << std::endl;
+    }
+    if( builder->canProfile() )
+    {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto ms = std::chrono::duration_cast< std::chrono::milliseconds >( end - start ).count();
+        std::cout << "Jaeger assembly constructed in " << ms << "ms!" << std::endl;
     }
     #ifdef DEBUG_PRINT
     std::cout << ss.str() << std::endl;

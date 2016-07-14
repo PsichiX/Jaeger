@@ -11,10 +11,11 @@
 				<Option object_output="obj/Win/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-ip D:/Git/Intuicio4/I4Tool/bin/Win/Debug/intuicio-d.exe -jpp ../Jaeger/bin/Win/Debug/I4Jaeger-d.dll ../test/test.jg" />
+				<Option parameters="../tests/test.jg" />
 				<Compiler>
 					<Add option="-g" />
 					<Add option="-DDEBUG" />
+					<Add option="-DBUILD_WIN" />
 				</Compiler>
 			</Target>
 			<Target title="[Win] Release">
@@ -26,6 +27,7 @@
 					<Add option="-O2" />
 					<Add option="-DRELEASE" />
 					<Add option="-DNDEBUG" />
+					<Add option="-DBUILD_WIN" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />

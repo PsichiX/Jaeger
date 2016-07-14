@@ -37,6 +37,7 @@
             this.addToPathCheckBox = new System.Windows.Forms.CheckBox();
             this.installCheckBox = new System.Windows.Forms.CheckBox();
             this.installButton = new System.Windows.Forms.Button();
+            this.registerStdCheckBox = new System.Windows.Forms.CheckBox();
             this.pathGroupBox.SuspendLayout();
             this.optionsGroupBox.SuspendLayout();
             this.SuspendLayout();
@@ -79,13 +80,14 @@
             this.optionsGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.optionsGroupBox.Controls.Add(this.registerStdCheckBox);
             this.optionsGroupBox.Controls.Add(this.shebangCheckBox);
             this.optionsGroupBox.Controls.Add(this.associateFileTypesCheckBox);
             this.optionsGroupBox.Controls.Add(this.addToPathCheckBox);
             this.optionsGroupBox.Controls.Add(this.installCheckBox);
             this.optionsGroupBox.Location = new System.Drawing.Point(13, 71);
             this.optionsGroupBox.Name = "optionsGroupBox";
-            this.optionsGroupBox.Size = new System.Drawing.Size(599, 115);
+            this.optionsGroupBox.Size = new System.Drawing.Size(599, 136);
             this.optionsGroupBox.TabIndex = 1;
             this.optionsGroupBox.TabStop = false;
             this.optionsGroupBox.Text = "Options";
@@ -95,10 +97,10 @@
             this.shebangCheckBox.AutoSize = true;
             this.shebangCheckBox.Checked = true;
             this.shebangCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.shebangCheckBox.Location = new System.Drawing.Point(7, 92);
+            this.shebangCheckBox.Location = new System.Drawing.Point(7, 113);
             this.shebangCheckBox.Name = "shebangCheckBox";
             this.shebangCheckBox.Size = new System.Drawing.Size(206, 17);
-            this.shebangCheckBox.TabIndex = 3;
+            this.shebangCheckBox.TabIndex = 6;
             this.shebangCheckBox.Text = "Provide shebang support for Windows";
             this.shebangCheckBox.UseVisualStyleBackColor = true;
             // 
@@ -107,10 +109,10 @@
             this.associateFileTypesCheckBox.AutoSize = true;
             this.associateFileTypesCheckBox.Checked = true;
             this.associateFileTypesCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.associateFileTypesCheckBox.Location = new System.Drawing.Point(7, 68);
+            this.associateFileTypesCheckBox.Location = new System.Drawing.Point(7, 90);
             this.associateFileTypesCheckBox.Name = "associateFileTypesCheckBox";
             this.associateFileTypesCheckBox.Size = new System.Drawing.Size(246, 17);
-            this.associateFileTypesCheckBox.TabIndex = 2;
+            this.associateFileTypesCheckBox.TabIndex = 5;
             this.associateFileTypesCheckBox.Text = "Associate known file types with Jaeger Toolset";
             this.associateFileTypesCheckBox.UseVisualStyleBackColor = true;
             // 
@@ -122,7 +124,7 @@
             this.addToPathCheckBox.Location = new System.Drawing.Point(7, 44);
             this.addToPathCheckBox.Name = "addToPathCheckBox";
             this.addToPathCheckBox.Size = new System.Drawing.Size(190, 17);
-            this.addToPathCheckBox.TabIndex = 1;
+            this.addToPathCheckBox.TabIndex = 3;
             this.addToPathCheckBox.Text = "Add to PATH environment variable";
             this.addToPathCheckBox.UseVisualStyleBackColor = true;
             // 
@@ -135,7 +137,7 @@
             this.installCheckBox.Location = new System.Drawing.Point(7, 20);
             this.installCheckBox.Name = "installCheckBox";
             this.installCheckBox.Size = new System.Drawing.Size(74, 17);
-            this.installCheckBox.TabIndex = 0;
+            this.installCheckBox.TabIndex = 2;
             this.installCheckBox.Text = "Install files";
             this.installCheckBox.UseVisualStyleBackColor = true;
             // 
@@ -143,19 +145,31 @@
             // 
             this.installButton.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.installButton.Location = new System.Drawing.Point(13, 192);
+            this.installButton.Location = new System.Drawing.Point(13, 213);
             this.installButton.Name = "installButton";
             this.installButton.Size = new System.Drawing.Size(599, 23);
-            this.installButton.TabIndex = 2;
+            this.installButton.TabIndex = 7;
             this.installButton.Text = "Install";
             this.installButton.UseVisualStyleBackColor = true;
             this.installButton.Click += new System.EventHandler(this.installButton_Click);
+            // 
+            // registerStdCheckBox
+            // 
+            this.registerStdCheckBox.AutoSize = true;
+            this.registerStdCheckBox.Checked = true;
+            this.registerStdCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.registerStdCheckBox.Location = new System.Drawing.Point(7, 67);
+            this.registerStdCheckBox.Name = "registerStdCheckBox";
+            this.registerStdCheckBox.Size = new System.Drawing.Size(239, 17);
+            this.registerStdCheckBox.TabIndex = 4;
+            this.registerStdCheckBox.Text = "Register JAEGER_STD environment variable";
+            this.registerStdCheckBox.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(624, 227);
+            this.ClientSize = new System.Drawing.Size(624, 248);
             this.Controls.Add(this.installButton);
             this.Controls.Add(this.optionsGroupBox);
             this.Controls.Add(this.pathGroupBox);
@@ -181,6 +195,7 @@
         private System.Windows.Forms.CheckBox addToPathCheckBox;
         private System.Windows.Forms.CheckBox associateFileTypesCheckBox;
         private System.Windows.Forms.CheckBox shebangCheckBox;
+        private System.Windows.Forms.CheckBox registerStdCheckBox;
     }
 }
 
