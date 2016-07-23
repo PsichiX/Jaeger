@@ -35,6 +35,12 @@ void Program::Field::validate( Builder* builder, Program* program )
         return;
     isValidated = true;
     // TODO: compile assembly?
+    if( !assembly.empty() )
+    {
+        std::size_t found = assembly.find( ':' );
+        if( found == std::string::npos )
+            throw std::runtime_error( "Wrong format of field assembly: " + assembly );
+    }
     if( !type.empty() && !program->structures.count( type ) )
         throw std::runtime_error( "Cannot find type: " + type + " of field: " + id );
 }
@@ -343,6 +349,7 @@ Program::FunctionCall::FunctionCall( const std::string& i, const std::vector< Ex
 : Expression( T_FUNCTION_CALL )
 , id( i )
 , args( a )
+, m_coroutine( false )
 {
 }
 
@@ -376,18 +383,30 @@ void Program::FunctionCall::validate( Builder* builder, Program* program, Functi
         throw std::runtime_error( "There is no function with signature: " + ss.str() );
     m_uid = ss.str();
     Function* f = program->functions[ss.str()].get();
+    // TODO: test if it will not be an overhead.
+    f->validate( builder, program );
     setResultType( f->type );
     if( program->isStrict() && getResultType().empty() )
         throw std::runtime_error( "In strict mode cannot call to function without return type!" );
+    m_coroutine = f->isCoroutine();
 }
 
 void Program::FunctionCall::assemble( std::ostream& output, bool dropValue )
 {
-    for( auto& a : args )
-        a->assemble( output, false );
-    output << "call @" << m_uid << "($stack);" << std::endl;
-    if( dropValue && !getResultType().empty() )
-        output << "call @" << getResultType() << "_drop($stack);" << std::endl;
+    if( m_coroutine )
+    {
+        for( auto& a : args )
+            a->assemble( output, false );
+        output << "call @" << m_uid << "___CoroutineCall($stack);" << std::endl;
+    }
+    else
+    {
+        for( auto& a : args )
+            a->assemble( output, false );
+        output << "call @" << m_uid << "($stack);" << std::endl;
+        if( dropValue && !getResultType().empty() )
+            output << "call @" << getResultType() << "_drop($stack);" << std::endl;
+    }
 }
 
 Program::Asm::Asm( const std::string& c )
@@ -622,9 +641,59 @@ void Program::While::assemble( std::ostream& output, bool dropValue )
     output << "__whileDone" << m_uid << ":" << std::endl;
 }
 
+std::size_t Program::Yield::s_testUID = 0;
+
+Program::Yield::Yield( const ExpressionPtr& d )
+: Expression( T_YIELD )
+, data( d )
+, m_testUID( 0 )
+{
+    m_testUID = ++s_testUID;
+}
+
+Program::Yield::~Yield()
+{
+}
+
+void Program::Yield::write( std::ostream& output, std::size_t level )
+{
+    std::string lvl( level, '-' );
+    output << lvl << "Yield" << std::endl;
+    output << lvl << ":type " << type << std::endl;
+    if( data )
+        data->write( output, level + 1 );
+}
+
+void Program::Yield::validate( Builder* builder, Program* program, Function* func )
+{
+    if( isValidated )
+        return;
+    isValidated = true;
+    if( program->isStrict() )
+        throw std::runtime_error( "In strict mode yield is not allowed!" );
+    if( data )
+    {
+        data->validate( builder, program, func );
+        if( data->type != Expression::T_FUNCTION_CALL )
+            throw std::runtime_error( "Trying to yield value other than function call!" );
+        if( !((FunctionCall*)data.get())->isCoroutine() )
+            throw std::runtime_error( "Trying to yield result of non-coroutine function call!" );
+    }
+    func->markCoroutine();
+}
+
+void Program::Yield::assemble( std::ostream& output, bool dropValue )
+{
+    output << "address %__yield" << m_testUID << " => $state->$___operation___;" << std::endl;
+    output << "mov void 1:i8 => $state->$___hasnext___;" << std::endl;
+    output << "ret void;" << std::endl;
+    output << "__yield" << m_testUID << ":" << std::endl;
+}
+
 Program::Function::Function( const std::string& i, const std::string& t )
 : id( i )
 , type( t )
+, m_coroutine( false )
 {
 }
 
@@ -672,6 +741,8 @@ void Program::Function::validate( Builder* builder, Program* program )
         v->validate( builder, program );
     for( auto& e : expressions)
         e->validate( builder, program, this );
+    if( m_coroutine && !type.empty() )
+        throw std::runtime_error( "Function: " + id + " cannot have return value because it's coroutine!" );
     if( !returnPlacement && !constructor && !disposal && jaegerifiedId.empty() && !type.empty() && expressions.empty() )
         throw std::runtime_error( "Function: " + id + " must return value!" );
     if( !type.empty() && !expressions.empty() && expressions.back()->type != Expression::T_CONSTANT_NULL && expressions.back()->getResultType() != type )
@@ -761,6 +832,190 @@ void Program::Function::assemble( std::ostream& output, Program* program )
         output << "}[{" << std::endl;
         for( auto& a : args )
             output << "call @" << a->type << "_Unref($" << a->id << ", $stack) => $" << a->id << ";" << std::endl;
+        output << "}];" << std::endl;
+        output << std::endl;
+    }
+    else if( m_coroutine )
+    {
+        output << "struct " << makeUID() << "___CoroutineState" << std::endl;
+        output << "{" << std::endl;
+        output << "___context___:i32;" << std::endl;
+        output << "___operation___:i32;" << std::endl;
+        output << "___hasnext___:i8;" << std::endl;
+        for( auto& a : args )
+        {
+            a->assemble( output );
+            output << ";" << std::endl;
+        }
+        for( auto& v : vars )
+        {
+            v->assemble( output );
+            output << ";" << std::endl;
+        }
+        output << "};" << std::endl;
+        output << std::endl;
+        output << "struct " << makeUID() << "___CoroutineStateItem" << std::endl;
+        output << "{" << std::endl;
+        output << "prev:*" << makeUID() << "___CoroutineStateItem;" << std::endl;
+        output << "next:*" << makeUID() << "___CoroutineStateItem;" << std::endl;
+        output << "state:*" << makeUID() << "___CoroutineState;" << std::endl;
+        output << "};" << std::endl;
+        output << std::endl;
+        output << "routine " << makeUID() << "___CoroutinePush(state:*" << makeUID() << "___CoroutineState):" << std::endl;
+        output << "<isnil:i8, temp:*" << makeUID() << "___CoroutineStateItem>" << std::endl;
+        output << "{" << std::endl;
+        output << "nil $c_" << makeUID() << "___queue => $isnil;" << std::endl;
+        output << "jif $isnil %initialize %append;" << std::endl;
+        output << "initialize:" << std::endl;
+        output << "new " << makeUID() << "___CoroutineStateItem 1:i32 => $c_" << makeUID() << "___queue;" << std::endl;
+        output << "mov void null => $c_" << makeUID() << "___queue->$prev;" << std::endl;
+        output << "mov void null => $c_" << makeUID() << "___queue->$next;" << std::endl;
+        output << "mov void $state => $c_" << makeUID() << "___queue->$state;" << std::endl;
+        output << "ret void;" << std::endl;
+        output << "append:" << std::endl;
+        output << "mov void $c_" << makeUID() << "___queue => $temp;" << std::endl;
+        output << "new " << makeUID() << "___CoroutineStateItem 1:i32 => $c_" << makeUID() << "___queue;" << std::endl;
+        output << "mov void $temp => $c_" << makeUID() << "___queue->$prev;" << std::endl;
+        output << "mov void null => $c_" << makeUID() << "___queue->$next;" << std::endl;
+        output << "mov void $state => $c_" << makeUID() << "___queue->$state;" << std::endl;
+        output << "mov void $c_" << makeUID() << "___queue => $temp->$next;" << std::endl;
+        output << "};" << std::endl;
+        output << std::endl;
+        output << "routine " << makeUID() << "___ProcessCoroutines(stack:i32):" << std::endl;
+        output << "<isnil:i8, temp:*" << makeUID() << "___CoroutineStateItem, prev:*" << makeUID() << "___CoroutineStateItem, next:*" << makeUID() << "___CoroutineStateItem>" << std::endl;
+        output << "{" << std::endl;
+        output << "nil $c_" << makeUID() << "___queue => $isnil;" << std::endl;
+        output << "jif $isnil %exit %start;" << std::endl;
+        output << "start:" << std::endl;
+        output << "mov void $c_" << makeUID() << "___queue => $temp;" << std::endl;
+        output << "mov void $c_" << makeUID() << "___process => $c_" << makeUID() << "___queue;" << std::endl;
+        output << "mov void null => $c_" << makeUID() << "___process;" << std::endl;
+        output << "iteration:" << std::endl;
+        output << "ctxs $temp->$state->$___context___;" << std::endl;
+        output << "call @" << makeUID() << "($stack, $temp->$state);" << std::endl;
+        output << "ctxs 0:i32;" << std::endl;
+        output << "jif $temp->$state->$___hasnext___ %next %delete;" << std::endl;
+        output << "delete:" << std::endl;
+        output << "mov void $temp->$prev => $prev;" << std::endl;
+        output << "mov void $temp->$next => $next;" << std::endl;
+        output << "nil $temp->$prev => $isnil;" << std::endl;
+        output << "jif $isnil %skipSetPrev %setPrev;" << std::endl;
+        output << "setPrev:" << std::endl;
+        output << "mov void $prev => $temp->$prev->$next;" << std::endl;
+        output << "skipSetPrev:" << std::endl;
+        output << "nil $temp->$next => $isnil;" << std::endl;
+        output << "jif $isnil %skipSetNext %setNext;" << std::endl;
+        output << "setNext:" << std::endl;
+        output << "mov void $next => $temp->$next->$prev;" << std::endl;
+        output << "skipSetNext:" << std::endl;
+        output << "ctxd $temp->$state->$___context___;" << std::endl;
+        output << "del $temp;" << std::endl;
+        output << "mov void $next => $temp;" << std::endl;
+        output << "goto %test;" << std::endl;
+        output << "next:" << std::endl;
+        output << "nil $temp->$prev => $isnil;" << std::endl;
+        output << "jif $isnil %testNext %setProcess;" << std::endl;
+        output << "setProcess:" << std::endl;
+        output << "mov void $temp => $c_" << makeUID() << "___process;" << std::endl;
+        output << "testNext:" << std::endl;
+        output << "nil $temp->$next => $isnil;" << std::endl;
+        output << "jif $isnil %test %goToNext;" << std::endl;
+        output << "goToNext:" << std::endl;
+        output << "mov void $temp->$next => $temp;" << std::endl;
+        output << "test:" << std::endl;
+        output << "nil $temp => $isnil;" << std::endl;
+        output << "jif $isnil %exit %iteration;" << std::endl;
+        output << "exit:" << std::endl;
+        output << "};" << std::endl;
+        output << std::endl;
+        output << "routine " << makeUID() << "___CoroutineCall(stack:i32):" << std::endl;
+        output << "<coroutine:*" << makeUID() << "___CoroutineState>" << std::endl;
+        output << "{" << std::endl;
+        output << "new " << makeUID() << "___CoroutineState 1:i32 => $coroutine;" << std::endl;
+        output << "mov void 0:i8 => $coroutine->$___hasnext___;" << std::endl;
+        output << "ctxc => $coroutine->$___context___;" << std::endl;
+        output << "ctxs $coroutine->$___context___;" << std::endl;
+        output << "call @" << makeUID() << "($stack, $coroutine);" << std::endl;
+        output << "ctxs 0:i32;" << std::endl;
+        output << "jif $coroutine->$___hasnext___ %success %failure;" << std::endl;
+        output << "success:" << std::endl;
+        output << "call @" << makeUID() << "___CoroutinePush($coroutine);" << std::endl;
+        output << "failure:" << std::endl;
+        output << "ctxd $coroutine->$___context___;" << std::endl;
+        output << "del $coroutine;" << std::endl;
+        output << "end:" << std::endl;
+        output << "};" << std::endl;
+        output << std::endl;
+        output << "<c_" << makeUID() << "___process:*" << makeUID() << "___CoroutineStateItem>;" << std::endl;
+        output << "<c_" << makeUID() << "___queue:*" << makeUID() << "___CoroutineStateItem>;" << std::endl;
+        output << std::endl;
+        output << "routine " << makeUID() << "(stack:i32, state:*" << makeUID() << "___CoroutineState):" << std::endl;
+        output << "<test:i8";
+        for( auto& a : args )
+        {
+            output << ", ";
+            a->assemble( output );
+        }
+        for( auto& v : vars )
+        {
+            output << ", ";
+            v->assemble( output );
+        }
+        output << ">" << std::endl;
+        output << "{" << std::endl;
+        output << "jif $state->$___hasnext___ %__resume %__start;" << std::endl;
+        output << "__resume:" << std::endl;
+        for( auto& a : args )
+            output << "mov void $state->$" << a->id << " => $" << a->id << ";" << std::endl;
+        for( auto& v : vars )
+        {
+            if( v->assembly.empty() )
+                output << "mov void $state->$" << v->id << " => $" << v->id << ";" << std::endl;
+            else
+            {
+                std::string name;
+                std::string type;
+                if( !program->extractFieldAssembly( v->assembly, name, type ) )
+                    throw std::runtime_error( "Wrong format of field assembly: " + v->assembly );
+                output << "mov void $state->$" << name << " => $" << name << ";" << std::endl;
+            }
+        }
+        output << "jump $state->$___operation___;" << std::endl;
+        output << "__start:" << std::endl;
+        for( std::vector< FieldPtr >::reverse_iterator it = args.rbegin(); it != args.rend(); ++it )
+            output << "cpop $stack void => $" << it->get()->id << ";" << std::endl;
+        for( auto& v : vars )
+            if( v->assembly.empty() )
+                output << "mov void null => $" + v->id << ";" << std::endl;
+        for( auto& e : expressions )
+            e->assemble( output, true );
+        output << "mov void 0:i8 => $state->$___hasnext___;" << std::endl;
+        output << "}[{" << std::endl;
+        output << "jif $state->$___hasnext___ %__save %__clean;" << std::endl;
+        output << "__save:" << std::endl;
+        for( auto& a : args )
+            output << "mov void $" << a->id << " => $state->$" << a->id << ";" << std::endl;
+        for( auto& v : vars )
+        {
+            if( v->assembly.empty() )
+                output << "mov void $" << v->id << " => $state->$" << v->id << ";" << std::endl;
+            else
+            {
+                std::string name;
+                std::string type;
+                if( !program->extractFieldAssembly( v->assembly, name, type ) )
+                    throw std::runtime_error( "Wrong format of field assembly: " + v->assembly );
+                output << "mov void $" << name << " => $state->$" << name << ";" << std::endl;
+            }
+        }
+        output << "goto %__exit;" << std::endl;
+        output << "__clean:" << std::endl;
+        for( auto& a : args )
+            output << "call @" << a->type << "_Unref($" << a->id << ", $stack) => $" << a->id << ";" << std::endl;
+        for( auto& v : vars )
+            if( v->assembly.empty() )
+                output << "call @" + v->type << "_Unref($" << v->id << ", $stack) => $" << v->id << ";" << std::endl;
+        output << "__exit:" << std::endl;
         output << "}];" << std::endl;
         output << std::endl;
     }
@@ -948,6 +1203,8 @@ void Program::validate( Builder* builder )
             throw std::runtime_error( "Cannot find startup function: " + startFunction );
         if( functions[sf]->type != "Int" )
             throw std::runtime_error( "Startup function does not return Int value: " + startFunction );
+        if( functions[sf]->isCoroutine() )
+            throw std::runtime_error( "Startup function cannot be a coroutine: " + startFunction );
     }
 }
 
@@ -1037,9 +1294,24 @@ I4::CompilationStatePtr Program::assemble( Builder* builder, std::size_t stackSi
         ss << "routine ___JAEGER_MAIN___():i32" << std::endl;
         ss << "<stack:i32, result:*Int, isnil:i8>" << std::endl;
         ss << "{" << std::endl;
+        for( auto& f : functions )
+        {
+            if( f.second->isCoroutine() )
+            {
+                ss << "mov void null => $c_" << f.second->makeUID() << "___queue;" << std::endl;
+                ss << "mov void null => $c_" << f.second->makeUID() << "___process;" << std::endl;
+            }
+        }
         ss << "ctxc => $stack;" << std::endl;
         ss << "call @" << startFunction << "_($stack);" << std::endl;
         ss << "cpop $stack void => $result;" << std::endl;
+        for( auto& f : functions )
+        {
+            if( f.second->isCoroutine() )
+            {
+                ss << "call @" << f.second->makeUID() << "___ProcessCoroutines($stack);" << std::endl;
+            }
+        }
         ss << "nil $result => $isnil;" << std::endl;
         ss << "jif $isnil %failure %success;" << std::endl;
         ss << "success:" << std::endl;
@@ -1228,6 +1500,16 @@ Program::Structure* Program::findValueStructure( const std::vector< std::string 
     }
 }
 
+bool Program::extractFieldAssembly( const std::string& input, std::string& outName, std::string& outType )
+{
+    std::size_t found = input.find( ':' );
+    if( found == std::string::npos )
+        return false;
+    outName = std::string_trim( input.substr( 0, found ) );
+    outType = std::string_trim( input.substr( found + 1 ) );
+    return true;
+}
+
 void Program::loadImports( Builder* builder )
 {
     for( auto& path : imports )
@@ -1354,7 +1636,7 @@ void Program::buildField()
 
 void Program::buildFieldFromAsm()
 {
-    std::string a = load();
+    std::string a = std::string_trim( load() );
     Field* f = new Field( a );
     m_builtFields.push_back( FieldPtr( f ) );
 }
@@ -1654,4 +1936,13 @@ void Program::buildWhile()
     auto t = m_builtExpressions.back();
     m_builtExpressions.pop_back();
     m_builtExpressions.push_back( ExpressionPtr( new While( t, exp ) ) );
+}
+
+void Program::buildYield()
+{
+    if( m_builtExpressions.size() < 1 )
+        throw std::runtime_error( "Cannot obtain loop test value!" );
+    auto t = m_builtExpressions.back();
+    m_builtExpressions.pop_back();
+    m_builtExpressions.push_back( ExpressionPtr( new Yield( t ) ) );
 }

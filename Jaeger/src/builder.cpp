@@ -1,8 +1,8 @@
 #include "../include/builder.h"
-#include <i4/vm.h>
 #include "../include/grammar.h"
 #include "../include/errors.h"
 #include "../include/compiler_actions.h"
+#include <i4/vm.h>
 #include <pegtl/analyze.hh>
 #include <exception>
 #include <regex>

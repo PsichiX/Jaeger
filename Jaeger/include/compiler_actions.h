@@ -27,6 +27,14 @@ namespace CompilerActions
         }
     };
 
+    template<> struct actions< Grammar::Flags::push_empty_expression >
+    {
+        static void apply( const pegtl::input& in, ProgramPtr& program )
+        {
+            program->pushEmptyExpression();
+        }
+    };
+
     template<> struct actions< Grammar::Flags::clear_last_function_definition >
     {
         static void apply( const pegtl::input& in, ProgramPtr& program )
@@ -347,6 +355,14 @@ namespace CompilerActions
         static void apply( const pegtl::input& in, ProgramPtr& program )
         {
             program->buildWhile();
+        }
+    };
+
+    template<> struct actions< Grammar::directive_yield >
+    {
+        static void apply( const pegtl::input& in, ProgramPtr& program )
+        {
+            program->buildYield();
         }
     };
 

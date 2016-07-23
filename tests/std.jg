@@ -376,7 +376,8 @@
 
 [not Bool <v Bool>
 	/let <r Bool>/
-	/if v then [ /set r true/ ]/
+	/set r true/
+	/if v then [ /set r false/ ]/
 	r
 ]
 

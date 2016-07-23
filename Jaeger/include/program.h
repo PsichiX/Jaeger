@@ -78,7 +78,8 @@ public:
             T_ASM,
             T_SET,
             T_CONDITION,
-            T_WHILE
+            T_WHILE,
+            T_YIELD
         };
 
         Expression( Type t );
@@ -194,6 +195,8 @@ public:
         FunctionCall( const std::string& i, const std::vector< ExpressionPtr >& a );
         virtual ~FunctionCall();
 
+        bool isCoroutine() { return m_coroutine; }
+
         virtual void write( std::ostream& output, std::size_t level );
         virtual void validate( Builder* builder, Program* program, Function* func );
         virtual void assemble( std::ostream& output, bool dropValue );
@@ -203,6 +206,7 @@ public:
 
     private:
         std::string m_uid;
+        bool m_coroutine;
     };
 
     typedef std::shared_ptr< FunctionCall > FunctionCallPtr;
@@ -279,11 +283,34 @@ public:
 
     typedef std::shared_ptr< While > WhilePtr;
 
+    class Yield : public Expression
+    {
+    public:
+        static std::size_t s_testUID;
+
+        Yield( const ExpressionPtr& d );
+        virtual ~Yield();
+
+        virtual void write( std::ostream& output, std::size_t level );
+        virtual void validate( Builder* builder, Program* program, Function* func );
+        virtual void assemble( std::ostream& output, bool dropValue );
+
+        ExpressionPtr data;
+
+    private:
+        std::size_t m_testUID;
+    };
+
+    typedef std::shared_ptr< Yield > YieldPtr;
+
     class Function : public Validated
     {
     public:
         Function( const std::string& i, const std::string& t );
         ~Function();
+
+        bool isCoroutine() { return m_coroutine; }
+        void markCoroutine() { m_coroutine = true; }
 
         void write( std::ostream& output, std::size_t level );
         void validate( Builder* builder, Program* program );
@@ -303,6 +330,7 @@ public:
 
     private:
         std::string m_uid;
+        bool m_coroutine;
     };
 
     typedef std::shared_ptr< Function > FunctionPtr;
@@ -340,6 +368,7 @@ public:
     void markStrict() { m_strict = true; }
     bool isStrict() { return m_strict; }
     I4::CompilationState::RoutinePtr getNativeModule( const std::string& id ) { return m_nativeModules.count( id ) ? m_nativeModules[id] : nullptr; }
+    void pushEmptyExpression() { m_builtExpressions.push_back( ExpressionPtr( nullptr ) ); }
 
     void write( std::ostream& output );
     void validate( Builder* builder );
@@ -351,6 +380,7 @@ public:
     void marshallObject( std::ostream& output, const std::string& id, const std::string& type, const std::string& asmType );
     Structure* findValueStructure( const std::vector< std::string >& ids, Function* func );
     Structure* findValueStructure( const std::vector< std::string >& ids, const std::string& type, std::size_t index );
+    bool extractFieldAssembly( const std::string& input, std::string& outName, std::string& outType );
     void loadImports( Builder* builder );
     void linkProgram( Program* program );
     void save( const std::string& v );
@@ -388,6 +418,7 @@ public:
     void buildElif();
     void buildElse();
     void buildWhile();
+    void buildYield();
 
     std::string startFunction;
     std::vector< std::string > imports;

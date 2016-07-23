@@ -13,6 +13,7 @@ namespace Grammar
     {
         struct push_empty_value : pegtl::success {};
         struct push_sections_target : pegtl::success {};
+        struct push_empty_expression : pegtl::success {};
         struct clear_last_function_definition : pegtl::success {};
         struct store_values_stack : pegtl::success {};
         struct store_expressions_stack : pegtl::success {};
@@ -66,7 +67,8 @@ namespace Grammar
     struct directive_if_else : pegtl::if_must< pegtl::seq< pegtl::string< 'e', 'l', 's', 'e' >, whitespaces >, pegtl::one< '[' >, whitespaces_any, Flags::store_expressions_stack, function_body, whitespaces_any, pegtl::one< ']' > > {};
     struct directive_if : pegtl::if_must< pegtl::seq< pegtl::string< 'i', 'f' >, whitespaces >, Flags::store_conditions_stack, directive_if_cond, pegtl::star< whitespaces, directive_if_elif >, pegtl::opt< whitespaces, directive_if_else > > {};
     struct directive_while : pegtl::if_must< pegtl::seq< pegtl::string< 'w', 'h', 'i', 'l', 'e' >, whitespaces >, data , whitespaces, pegtl::string< 't', 'h', 'e', 'n' >, whitespaces_any, pegtl::one< '[' >, whitespaces_any, Flags::store_expressions_stack, function_body, whitespaces_any, pegtl::one< ']' > > {};
-    struct directives_local : pegtl::if_must< pegtl::one< '/' >, whitespaces_any, pegtl::sor< directive_let, directive_asm, directive_return, directive_set, directive_if, directive_while >, whitespaces_any, pegtl::one< '/' > > {};
+    struct directive_yield : pegtl::if_must< pegtl::string< 'y', 'i', 'e', 'l', 'd' >, pegtl::if_then_else< pegtl::seq< whitespaces, function_call >, pegtl::success, Flags::push_empty_expression > > {};
+    struct directives_local : pegtl::if_must< pegtl::one< '/' >, whitespaces_any, pegtl::sor< directive_let, directive_asm, directive_return, directive_set, directive_if, directive_while, directive_yield >, whitespaces_any, pegtl::one< '/' > > {};
     struct data : pegtl::sor< function_call, constant_value, value > {};
     struct function_call_section : pegtl::seq< Flags::store_expressions_stack, pegtl::star< whitespaces_any, data > > {};
     struct function_call_sections : pegtl::list< function_call_section, pegtl::seq< whitespaces_any, pegtl::one< '&' >, whitespaces_any > > {};

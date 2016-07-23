@@ -4,21 +4,31 @@
 /start main/
 # `import` directive put code from file into program.
 /import "std.jg"/
-###
-[main Int
-	(roarLine "WTF")
-	0
-]
-###
 
+# coroutine is just a function with YIELD directive in it.
+# YIELD directive tells compiler to pause function execution in that place,
+# and resume it when application is not busy.
 [countdown <v Int>
 	/while (greater v 0) then [
 		(roar "Coroutine: " & v & "\n")
 		/set v (sub v 1)/
-		#/yield/
+		#/yield (waitForMilliseconds 1000)/
+		/yield/
 	]/
 	(roarLine "Kaboom!")
 ]
+
+###[waitForSeconds <ms Int>
+	/let
+		<start Int>
+		<end Int>
+		/
+	/set start (currentTime)/
+	/set end start/
+	/while (not (less end ms)) then [
+		/yield/
+	]/
+]###
 
 # function called at program startup.
 # it must return integer value which is exit code (0 means success).
