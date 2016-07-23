@@ -12,23 +12,21 @@
 	/while (greater v 0) then [
 		(roar "Coroutine: " & v & "\n")
 		/set v (sub v 1)/
-		#/yield (waitForMilliseconds 1000)/
-		/yield/
+		/yield (waitForMilliseconds 1000)/
+		#/yield/
 	]/
 	(roarLine "Kaboom!")
 ]
 
-###[waitForSeconds <ms Int>
-	/let
-		<start Int>
-		<end Int>
-		/
-	/set start (currentTime)/
-	/set end start/
-	/while (not (less end ms)) then [
+[waitForMilliseconds <ms Int>
+	/let <start Int>/
+	/set start (currentTimeSteadyMS)/
+	/while (greater ms (sub (currentTimeSteadyMS) start)) then [
+		(roar "")
 		/yield/
 	]/
-]###
+	(roar "waitForMilliseconds end for: " & ms & "\n")
+]
 
 # function called at program startup.
 # it must return integer value which is exit code (0 means success).
@@ -36,7 +34,8 @@
 	# `let` directive declares function local storage.
 	# be aware that those objects are nullified,
 	# so you have to create and assign objects to them before they will be used.
-	/let
+	###/let
+		<time Int>
 		<a Int>
 		<b Float>
 		<c String>
@@ -46,6 +45,7 @@
 		<content String>
 		/
 
+	/set time (currentTimeSteadyMS)/
 	# `set` directive assigns value or function result to local variable.
 	/set a 1/
 	/set b 2.3/
@@ -87,9 +87,12 @@
 		(roarLine "a equals 1!")
 	] else [
 		(roarLine "WTF!")
-	]/
+	]/###
 
+	(roarLine "START!")
 	(countdown 5)
+	(roar "Main completed in: " & (sub (currentTimeSteadyMS) time) & "ms!\n")
+	(roarLine "END!")
 
 	# the very last expression is used as function result value.
 	0

@@ -684,10 +684,24 @@ void Program::Yield::validate( Builder* builder, Program* program, Function* fun
 
 void Program::Yield::assemble( std::ostream& output, bool dropValue )
 {
-    output << "address %__yield" << m_testUID << " => $state->$___operation___;" << std::endl;
-    output << "mov void 1:i8 => $state->$___hasnext___;" << std::endl;
-    output << "ret void;" << std::endl;
-    output << "__yield" << m_testUID << ":" << std::endl;
+    if( data )
+    {
+        output << "ret void;" << std::endl;
+        ((FunctionCall*)data.get())->assemble( output, false );
+        output << "address %__yield" << m_testUID << " => $state->$___operation___;" << std::endl;
+        output << "cpop $stack void => $state->$___waitForUid___;" << std::endl;
+        output << "mov void 1:i8 => $state->$___hasnext___;" << std::endl;
+        output << "ret void;" << std::endl;
+        output << "__yield" << m_testUID << ":" << std::endl;
+    }
+    else
+    {
+        output << "address %__yield" << m_testUID << " => $state->$___operation___;" << std::endl;
+        output << "mov void 0:i32 => $state->$___waitForUid___;" << std::endl;
+        output << "mov void 1:i8 => $state->$___hasnext___;" << std::endl;
+        output << "ret void;" << std::endl;
+        output << "__yield" << m_testUID << ":" << std::endl;
+    }
 }
 
 Program::Function::Function( const std::string& i, const std::string& t )
@@ -839,6 +853,8 @@ void Program::Function::assemble( std::ostream& output, Program* program )
     {
         output << "struct " << makeUID() << "___CoroutineState" << std::endl;
         output << "{" << std::endl;
+        output << "___uid___:i32;" << std::endl;
+        output << "___waitForUid___:i32;" << std::endl;
         output << "___operation___:i32;" << std::endl;
         output << "___hasnext___:i8;" << std::endl;
         for( auto& a : args )
@@ -863,83 +879,103 @@ void Program::Function::assemble( std::ostream& output, Program* program )
         output << "routine " << makeUID() << "___CoroutinePush(state:*" << makeUID() << "___CoroutineState):" << std::endl;
         output << "<isnil:i8, temp:*" << makeUID() << "___CoroutineStateItem>" << std::endl;
         output << "{" << std::endl;
-        output << "nil $c_" << makeUID() << "___queue => $isnil;" << std::endl;
+        output << "nil $c_" << makeUID() << "___queueLast => $isnil;" << std::endl;
         output << "jif $isnil %initialize %append;" << std::endl;
         output << "initialize:" << std::endl;
-        output << "new " << makeUID() << "___CoroutineStateItem 1:i32 => $c_" << makeUID() << "___queue;" << std::endl;
-        output << "mov void null => $c_" << makeUID() << "___queue->$prev;" << std::endl;
-        output << "mov void null => $c_" << makeUID() << "___queue->$next;" << std::endl;
-        output << "mov void $state => $c_" << makeUID() << "___queue->$state;" << std::endl;
+        output << "new " << makeUID() << "___CoroutineStateItem 1:i32 => $temp;" << std::endl;
+        output << "mov void null => $temp->$prev;" << std::endl;
+        output << "mov void null => $temp->$next;" << std::endl;
+        output << "mov void $state => $temp->$state;" << std::endl;
+        output << "mov void $temp => $c_" << makeUID() << "___queueFirst;" << std::endl;
+        output << "mov void $temp => $c_" << makeUID() << "___queueLast;" << std::endl;
         output << "ret void;" << std::endl;
         output << "append:" << std::endl;
-        output << "mov void $c_" << makeUID() << "___queue => $temp;" << std::endl;
-        output << "new " << makeUID() << "___CoroutineStateItem 1:i32 => $c_" << makeUID() << "___queue;" << std::endl;
-        output << "mov void $temp => $c_" << makeUID() << "___queue->$prev;" << std::endl;
-        output << "mov void null => $c_" << makeUID() << "___queue->$next;" << std::endl;
-        output << "mov void $state => $c_" << makeUID() << "___queue->$state;" << std::endl;
-        output << "mov void $c_" << makeUID() << "___queue => $temp->$next;" << std::endl;
+        output << "new " << makeUID() << "___CoroutineStateItem 1:i32 => $temp;" << std::endl;
+        output << "mov void $temp => $c_" << makeUID() << "___queueLast->$next;" << std::endl;
+        output << "mov void $c_" << makeUID() << "___queueLast => $temp->$prev;" << std::endl;
+        output << "mov void null => $temp->$next;" << std::endl;
+        output << "mov void $state => $temp->$state;" << std::endl;
+        output << "mov void $temp => $c_" << makeUID() << "___queueLast;" << std::endl;
         output << "};" << std::endl;
         output << std::endl;
-        output << "routine " << makeUID() << "___ProcessCoroutines(stack:i32):" << std::endl;
+        output << "routine " << makeUID() << "___ProcessCoroutines(stack:i32):i8" << std::endl;
         output << "<isnil:i8, temp:*" << makeUID() << "___CoroutineStateItem, prev:*" << makeUID() << "___CoroutineStateItem, next:*" << makeUID() << "___CoroutineStateItem>" << std::endl;
         output << "{" << std::endl;
-        output << "nil $c_" << makeUID() << "___queue => $isnil;" << std::endl;
-        output << "jif $isnil %exit %start;" << std::endl;
+        output << "nil $c_" << makeUID() << "___queueFirst => $isnil;" << std::endl;
+        output << "jif $isnil %exitEmpty %start;" << std::endl;
         output << "start:" << std::endl;
-        output << "mov void $c_" << makeUID() << "___queue => $temp;" << std::endl;
-        output << "mov void $c_" << makeUID() << "___process => $c_" << makeUID() << "___queue;" << std::endl;
-        output << "mov void null => $c_" << makeUID() << "___process;" << std::endl;
+        output << "mov void $c_" << makeUID() << "___queueFirst => $temp;" << std::endl;
+        output << "mov void null => $c_" << makeUID() << "___queueFirst;" << std::endl;
+        output << "mov void null => $c_" << makeUID() << "___queueLast;" << std::endl;
         output << "iteration:" << std::endl;
         output << "call @" << makeUID() << "($stack, $temp->$state);" << std::endl;
         output << "jif $temp->$state->$___hasnext___ %next %delete;" << std::endl;
         output << "delete:" << std::endl;
         output << "mov void $temp->$prev => $prev;" << std::endl;
         output << "mov void $temp->$next => $next;" << std::endl;
-        output << "nil $temp->$prev => $isnil;" << std::endl;
+        output << "nil $prev => $isnil;" << std::endl;
         output << "jif $isnil %skipSetPrev %setPrev;" << std::endl;
         output << "setPrev:" << std::endl;
-        output << "mov void $prev => $temp->$prev->$next;" << std::endl;
+        output << "mov void $next => $temp->$prev->$next;" << std::endl;
         output << "skipSetPrev:" << std::endl;
-        output << "nil $temp->$next => $isnil;" << std::endl;
+        output << "nil $next => $isnil;" << std::endl;
         output << "jif $isnil %skipSetNext %setNext;" << std::endl;
         output << "setNext:" << std::endl;
-        output << "mov void $next => $temp->$next->$prev;" << std::endl;
+        output << "mov void $prev => $temp->$next->$prev;" << std::endl;
         output << "skipSetNext:" << std::endl;
         output << "del $temp;" << std::endl;
         output << "mov void $next => $temp;" << std::endl;
         output << "goto %test;" << std::endl;
         output << "next:" << std::endl;
+        output << "mov void $temp => $c_" << makeUID() << "___queueLast;" << std::endl;
         output << "nil $temp->$prev => $isnil;" << std::endl;
-        output << "jif $isnil %testNext %setProcess;" << std::endl;
-        output << "setProcess:" << std::endl;
-        output << "mov void $temp => $c_" << makeUID() << "___process;" << std::endl;
-        output << "testNext:" << std::endl;
+        output << "jif $isnil %setFirstNext %skipFirstNext;" << std::endl;
+        output << "setFirstNext:" << std::endl;
+        output << "mov void $temp => $c_" << makeUID() << "___queueFirst;" << std::endl;
+        output << "skipFirstNext:" << std::endl;
         output << "nil $temp->$next => $isnil;" << std::endl;
-        output << "jif $isnil %test %goToNext;" << std::endl;
+        output << "jif $isnil %skip %goToNext;" << std::endl;
+        output << "skip:" << std::endl;
+        output << "mov void null => $temp;" << std::endl;
+        output << "goto %test;" << std::endl;
         output << "goToNext:" << std::endl;
         output << "mov void $temp->$next => $temp;" << std::endl;
         output << "test:" << std::endl;
         output << "nil $temp => $isnil;" << std::endl;
-        output << "jif $isnil %exit %iteration;" << std::endl;
-        output << "exit:" << std::endl;
+        output << "jif $isnil %exitNonEmpty %testFirst;" << std::endl;
+        output << "testFirst:" << std::endl;
+        output << "nil $temp->$prev => $isnil;" << std::endl;
+        output << "jif $isnil %setFirst %iteration;" << std::endl;
+        output << "setFirst:" << std::endl;
+        output << "mov void $temp => $c_" << makeUID() << "___queueFirst;" << std::endl;
+        output << "goto %iteration;" << std::endl;
+        output << "exitEmpty:" << std::endl;
+        output << "ret 0:i8;" << std::endl;
+        output << "exitNonEmpty:" << std::endl;
+        output << "ret 1:i8;" << std::endl;
         output << "};" << std::endl;
         output << std::endl;
         output << "routine " << makeUID() << "___CoroutineCall(stack:i32):" << std::endl;
         output << "<coroutine:*" << makeUID() << "___CoroutineState>" << std::endl;
         output << "{" << std::endl;
         output << "new " << makeUID() << "___CoroutineState 1:i32 => $coroutine;" << std::endl;
+        output << "mov void $g_coroutinesUID => $coroutine->$___uid___;" << std::endl;
+        output << "mov void 0:i32 => $coroutine->$___waitForUid___;" << std::endl;
         output << "mov void 0:i8 => $coroutine->$___hasnext___;" << std::endl;
         output << "call @" << makeUID() << "($stack, $coroutine);" << std::endl;
         output << "jif $coroutine->$___hasnext___ %success %failure;" << std::endl;
         output << "success:" << std::endl;
+        output << "add void $g_coroutinesUID 1:i32 => $g_coroutinesUID;" << std::endl;
         output << "call @" << makeUID() << "___CoroutinePush($coroutine);" << std::endl;
+        output << "cpush $stack void $coroutine->$uid;" << std::endl;
+        output << "ret void;" << std::endl;
         output << "failure:" << std::endl;
         output << "del $coroutine;" << std::endl;
-        output << "end:" << std::endl;
+        output << "cpush $stack void 0:i32;" << std::endl;
         output << "};" << std::endl;
         output << std::endl;
-        output << "<c_" << makeUID() << "___process:*" << makeUID() << "___CoroutineStateItem>;" << std::endl;
-        output << "<c_" << makeUID() << "___queue:*" << makeUID() << "___CoroutineStateItem>;" << std::endl;
+        output << "<c_" << makeUID() << "___queueFirst:*" << makeUID() << "___CoroutineStateItem>;" << std::endl;
+        output << "<c_" << makeUID() << "___queueLast:*" << makeUID() << "___CoroutineStateItem>;" << std::endl;
         output << std::endl;
         output << "routine " << makeUID() << "(stack:i32, state:*" << makeUID() << "___CoroutineState):" << std::endl;
         output << "<test:i8";
@@ -1210,6 +1246,8 @@ I4::CompilationStatePtr Program::assemble( Builder* builder, std::size_t stackSi
     ss << "#stack " << stackSize << ";" << std::endl;
     ss << "#pointersize 32;" << std::endl;
     ss << std::endl;
+    ss << "<g_coroutinesUID:i32>;" << std::endl;
+    ss << std::endl;
     ss << "routine ___MakeIntConstant___(stack:i32, value:i32):" << std::endl;
     ss << "<this:*Int>" << std::endl;
     ss << "{" << std::endl;
@@ -1284,26 +1322,32 @@ I4::CompilationStatePtr Program::assemble( Builder* builder, std::size_t stackSi
     {
         ss << "#entry @___JAEGER_MAIN___;" << std::endl;
         ss << "routine ___JAEGER_MAIN___():i32" << std::endl;
-        ss << "<stack:i32, result:*Int, isnil:i8>" << std::endl;
+        ss << "<stack:i32, result:*Int, isnil:i8, test:i8>" << std::endl;
         ss << "{" << std::endl;
+        ss << "mov void 1:i32 => $g_coroutinesUID;" << std::endl;
         for( auto& f : functions )
         {
             if( f.second->isCoroutine() )
             {
-                ss << "mov void null => $c_" << f.second->makeUID() << "___queue;" << std::endl;
-                ss << "mov void null => $c_" << f.second->makeUID() << "___process;" << std::endl;
+                ss << "mov void null => $c_" << f.second->makeUID() << "___queueFirst;" << std::endl;
+                ss << "mov void null => $c_" << f.second->makeUID() << "___queueLast;" << std::endl;
             }
         }
         ss << "ctxc => $stack;" << std::endl;
         ss << "call @" << startFunction << "_($stack);" << std::endl;
         ss << "cpop $stack void => $result;" << std::endl;
+        ss << "coroutinesLoop:" << std::endl;
+        ss << "mov void 0:i8 => $test;" << std::endl;
         for( auto& f : functions )
         {
             if( f.second->isCoroutine() )
             {
-                ss << "call @" << f.second->makeUID() << "___ProcessCoroutines($stack);" << std::endl;
+                ss << "call @" << f.second->makeUID() << "___ProcessCoroutines($stack) => $isnil;" << std::endl;
+                ss << "or void $isnil $test => $test;" << std::endl;
             }
         }
+        ss << "jif $test %coroutinesLoop %coroutinesEnd;" << std::endl;
+        ss << "coroutinesEnd:" << std::endl;
         ss << "nil $result => $isnil;" << std::endl;
         ss << "jif $isnil %failure %success;" << std::endl;
         ss << "success:" << std::endl;

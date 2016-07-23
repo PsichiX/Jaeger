@@ -30,6 +30,14 @@
 	routine file_write_all(handle:*i32, buffer:*i8, size:i32):i32
 	~~ from IO/
 
+/jaegerify ~~
+	routine currentTimeEpochMS():i32
+	~~ from System/
+
+/jaegerify ~~
+	routine currentTimeSteadyMS():i32
+	~~ from System/
+
 ###
 	Int
 ###
@@ -514,4 +522,28 @@
 	/set file (fileOpen path "w")/
 	(fileWriteAll file content)
 	(fileClose file)
+]
+
+###
+	System manipulation.
+###
+
+[currentTimeEpochMS Int
+	/let
+		<r Int>
+		~~ time:u64 ~~
+		/
+	/set r 0/
+	/asm ~~
+		call @currentTimeEpochMS() => $time;
+		conv $time => $r->$value;
+		~~/
+	r
+]
+
+[currentTimeSteadyMS Int
+	/let <r Int>/
+	/set r 0/
+	/asm ~~ call @currentTimeSteadyMS() => $r->$value; ~~/
+	r
 ]
