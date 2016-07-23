@@ -839,7 +839,6 @@ void Program::Function::assemble( std::ostream& output, Program* program )
     {
         output << "struct " << makeUID() << "___CoroutineState" << std::endl;
         output << "{" << std::endl;
-        output << "___context___:i32;" << std::endl;
         output << "___operation___:i32;" << std::endl;
         output << "___hasnext___:i8;" << std::endl;
         for( auto& a : args )
@@ -891,9 +890,7 @@ void Program::Function::assemble( std::ostream& output, Program* program )
         output << "mov void $c_" << makeUID() << "___process => $c_" << makeUID() << "___queue;" << std::endl;
         output << "mov void null => $c_" << makeUID() << "___process;" << std::endl;
         output << "iteration:" << std::endl;
-        output << "ctxs $temp->$state->$___context___;" << std::endl;
         output << "call @" << makeUID() << "($stack, $temp->$state);" << std::endl;
-        output << "ctxs 0:i32;" << std::endl;
         output << "jif $temp->$state->$___hasnext___ %next %delete;" << std::endl;
         output << "delete:" << std::endl;
         output << "mov void $temp->$prev => $prev;" << std::endl;
@@ -908,7 +905,6 @@ void Program::Function::assemble( std::ostream& output, Program* program )
         output << "setNext:" << std::endl;
         output << "mov void $next => $temp->$next->$prev;" << std::endl;
         output << "skipSetNext:" << std::endl;
-        output << "ctxd $temp->$state->$___context___;" << std::endl;
         output << "del $temp;" << std::endl;
         output << "mov void $next => $temp;" << std::endl;
         output << "goto %test;" << std::endl;
@@ -933,15 +929,11 @@ void Program::Function::assemble( std::ostream& output, Program* program )
         output << "{" << std::endl;
         output << "new " << makeUID() << "___CoroutineState 1:i32 => $coroutine;" << std::endl;
         output << "mov void 0:i8 => $coroutine->$___hasnext___;" << std::endl;
-        output << "ctxc => $coroutine->$___context___;" << std::endl;
-        output << "ctxs $coroutine->$___context___;" << std::endl;
         output << "call @" << makeUID() << "($stack, $coroutine);" << std::endl;
-        output << "ctxs 0:i32;" << std::endl;
         output << "jif $coroutine->$___hasnext___ %success %failure;" << std::endl;
         output << "success:" << std::endl;
         output << "call @" << makeUID() << "___CoroutinePush($coroutine);" << std::endl;
         output << "failure:" << std::endl;
-        output << "ctxd $coroutine->$___context___;" << std::endl;
         output << "del $coroutine;" << std::endl;
         output << "end:" << std::endl;
         output << "};" << std::endl;
