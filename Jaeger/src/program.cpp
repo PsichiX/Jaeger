@@ -398,6 +398,8 @@ void Program::FunctionCall::assemble( std::ostream& output, bool dropValue )
         for( auto& a : args )
             a->assemble( output, false );
         output << "call @" << m_uid << "___CoroutineCall($stack);" << std::endl;
+        if( dropValue )
+            output << "cdrop $stack i32;" << std::endl;
     }
     else
     {
@@ -686,7 +688,6 @@ void Program::Yield::assemble( std::ostream& output, bool dropValue )
 {
     if( data )
     {
-        output << "ret void;" << std::endl;
         ((FunctionCall*)data.get())->assemble( output, false );
         output << "address %__yield" << m_testUID << " => $state->$___operation___;" << std::endl;
         output << "cpop $stack void => $state->$___waitForUid___;" << std::endl;
@@ -905,9 +906,15 @@ void Program::Function::assemble( std::ostream& output, Program* program )
         output << "jif $isnil %exitEmpty %start;" << std::endl;
         output << "start:" << std::endl;
         output << "mov void $c_" << makeUID() << "___queueFirst => $temp;" << std::endl;
-        output << "mov void null => $c_" << makeUID() << "___queueFirst;" << std::endl;
-        output << "mov void null => $c_" << makeUID() << "___queueLast;" << std::endl;
         output << "iteration:" << std::endl;
+        output << "eq void $temp->$state->$___waitForUid___ 0:i32 => $isnil;" << std::endl;
+        output << "jif $isnil %call %testWaitForUid;" << std::endl;
+        output << "testWaitForUid:" << std::endl;
+        output << "call @___DoesCoroutineExists___($temp->$state->$___waitForUid___) => $isnil;" << std::endl;
+        output << "jif $isnil %next %clearWaitFlag;" << std::endl;
+        output << "clearWaitFlag:" << std::endl;
+        output << "mov void 0:i32 => $temp->$state->$___waitForUid___;" << std::endl;
+        output << "call:" << std::endl;
         output << "call @" << makeUID() << "($stack, $temp->$state);" << std::endl;
         output << "jif $temp->$state->$___hasnext___ %next %delete;" << std::endl;
         output << "delete:" << std::endl;
@@ -960,18 +967,41 @@ void Program::Function::assemble( std::ostream& output, Program* program )
         output << "{" << std::endl;
         output << "new " << makeUID() << "___CoroutineState 1:i32 => $coroutine;" << std::endl;
         output << "mov void $g_coroutinesUID => $coroutine->$___uid___;" << std::endl;
+        output << "add void $g_coroutinesUID 1:i32 => $g_coroutinesUID;" << std::endl;
         output << "mov void 0:i32 => $coroutine->$___waitForUid___;" << std::endl;
         output << "mov void 0:i8 => $coroutine->$___hasnext___;" << std::endl;
         output << "call @" << makeUID() << "($stack, $coroutine);" << std::endl;
         output << "jif $coroutine->$___hasnext___ %success %failure;" << std::endl;
         output << "success:" << std::endl;
-        output << "add void $g_coroutinesUID 1:i32 => $g_coroutinesUID;" << std::endl;
         output << "call @" << makeUID() << "___CoroutinePush($coroutine);" << std::endl;
-        output << "cpush $stack void $coroutine->$uid;" << std::endl;
+        output << "cpush $stack void $coroutine->$___uid___;" << std::endl;
         output << "ret void;" << std::endl;
         output << "failure:" << std::endl;
+        output << "sub void $g_coroutinesUID 1:i32 => $g_coroutinesUID;" << std::endl;
         output << "del $coroutine;" << std::endl;
         output << "cpush $stack void 0:i32;" << std::endl;
+        output << "};" << std::endl;
+        output << std::endl;
+        output << "routine " << makeUID() << "___CoroutineExists(uid:i32):i8" << std::endl;
+        output << "<test:i8, temp:*" << makeUID() << "___CoroutineStateItem>" << std::endl;
+        output << "{" << std::endl;
+        output << "mov void $c_" << makeUID() << "___queueFirst => $temp;" << std::endl;
+        output << "iteration:" << std::endl;
+        output << "nil $temp => $test;" << std::endl;
+        output << "jif $test %failure %test;" << std::endl;
+        output << "test:" << std::endl;
+        output << "eq void $temp->$state->$___uid___ $uid => $test;" << std::endl;
+        output << "jif $test %success %next;" << std::endl;
+        output << "success:" << std::endl;
+        output << "ret 1:i8;" << std::endl;
+        output << "next:" << std::endl;
+        output << "nil $temp->$next => $test;" << std::endl;
+        output << "jif $test %failure %goToNext;" << std::endl;
+        output << "goToNext:" << std::endl;
+        output << "mov void $temp->$next => $temp;" << std::endl;
+        output << "goto %iteration;" << std::endl;
+        output << "failure:" << std::endl;
+        output << "ret 0:i8;" << std::endl;
         output << "};" << std::endl;
         output << std::endl;
         output << "<c_" << makeUID() << "___queueFirst:*" << makeUID() << "___CoroutineStateItem>;" << std::endl;
@@ -1240,6 +1270,7 @@ I4::CompilationStatePtr Program::assemble( Builder* builder, std::size_t stackSi
 {
     auto start = std::chrono::high_resolution_clock::now();
     std::stringstream ss;
+    std::size_t i = 0;
     ss << "#!/usr/bin/env i4s" << std::endl;
     ss << std::endl;
     ss << "#intuicio 4.0;" << std::endl;
@@ -1306,6 +1337,24 @@ I4::CompilationStatePtr Program::assemble( Builder* builder, std::size_t stackSi
     ss << "jif $char %iterate %done;" << std::endl;
     ss << "done:" << std::endl;
     ss << "ret $pos;" << std::endl;
+    ss << "};" << std::endl;
+    ss << std::endl;
+    ss << "routine ___DoesCoroutineExists___(uid:i32):i8" << std::endl;
+    ss << "<test:i8>" << std::endl;
+    ss << "{" << std::endl;
+    for( auto& f : functions )
+    {
+        if( f.second->isCoroutine() )
+        {
+            ss << "call @" << f.second->makeUID() << "___CoroutineExists($uid) => $test;" << std::endl;
+            ss << "jif $test %___success %___continue" << i << ";" << std::endl;
+            ss << "___continue" << i << ":" << std::endl;
+            ++i;
+        }
+    }
+    ss << "ret 0:i8;" << std::endl;
+    ss << "___success:" << std::endl;
+    ss << "ret 1:i8;" << std::endl;
     ss << "};" << std::endl;
     ss << std::endl;
     for( auto& a : globalAsm )

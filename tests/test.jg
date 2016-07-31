@@ -13,6 +13,7 @@
 		(roar "Coroutine: " & v & "\n")
 		/set v (sub v 1)/
 		/yield (waitForMilliseconds 1000)/
+		(roarLine "After coroutine yield!")
 		#/yield/
 	]/
 	(roarLine "Kaboom!")
@@ -22,7 +23,6 @@
 	/let <start Int>/
 	/set start (currentTimeSteadyMS)/
 	/while (greater ms (sub (currentTimeSteadyMS) start)) then [
-		(roar "")
 		/yield/
 	]/
 	(roar "waitForMilliseconds end for: " & ms & "\n")
@@ -34,7 +34,7 @@
 	# `let` directive declares function local storage.
 	# be aware that those objects are nullified,
 	# so you have to create and assign objects to them before they will be used.
-	###/let
+	/let
 		<time Int>
 		<a Int>
 		<b Float>
@@ -47,7 +47,7 @@
 
 	/set time (currentTimeSteadyMS)/
 	# `set` directive assigns value or function result to local variable.
-	/set a 1/
+	###/set a 1/
 	/set b 2.3/
 	/set c "4"/
 	/set d true/
