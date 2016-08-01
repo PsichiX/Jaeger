@@ -75,8 +75,8 @@
 	/set b 2.3/
 	/set c "4"/
 	/set d true/
-	/set pathFrom "../../Jaeger/tests/Person.jg"/
-	/set pathTo "../../Jaeger/tests/Person2.jg"/
+	/set pathFrom "Person.jg"/
+	/set pathTo "Person2.jg"/
 	/set content (fileGetContents pathFrom)/
 
 	# this mysterious `&` character is used as arguments delimiter.
