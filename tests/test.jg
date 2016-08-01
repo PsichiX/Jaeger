@@ -2,8 +2,28 @@
 
 # `start` directive tells compiler which function is entry point.
 /start main/
+
 # `import` directive put code from file into program.
 /import "std.jg"/
+
+[<template Temp
+	{Temp?{0}
+		<value ?{0}>
+	}
+
+	[Temp?{0} Temp?{0} <v ?{0}>
+		/let <this Temp?{0}>/
+		/set this (Temp?{0})/
+		/set this.value v/
+		this
+	]
+
+	[add Temp?{0} <a Temp?{0}> <b Temp?{0}>
+		(Temp?{0} (add a.value b.value))
+	]
+>]
+
+[<implement Temp Int>]
 
 # coroutine is just a function with YIELD directive in it.
 # YIELD directive tells compiler to pause function execution in that place,
@@ -88,9 +108,13 @@
 		(roarLine "WTF!")
 	]/
 
+	/let <temp TempInt>/
+	/set temp (add (TempInt -5) (TempInt 5))/
+
 	(countdown 5)
 	(roar "Main completed in: " & (sub (currentTimeSteadyMS) time) & "ms!\n")
 
 	# the very last expression is used as function result value.
-	0
+	temp.value
+	#0
 ]

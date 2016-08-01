@@ -1,9 +1,13 @@
 #include "../include/program.h"
 #include "../include/builder.h"
 #include "../include/std_extension.h"
+#include "../include/grammar.h"
+#include "../include/compiler_actions.h"
+#include <pegtl/analyze.hh>
 #include <iostream>
 #include <algorithm>
 #include <chrono>
+#include <regex>
 
 Program::Field::Field( const std::string& i, const std::string& t )
 : id( i )
@@ -325,7 +329,8 @@ void Program::Value::validate( Builder* builder, Program* program, Function* fun
     Structure* s = program->findValueStructure( ids, func );
     if( !s )
     {
-        std::stringstream ss( ids[0] );
+        std::stringstream ss;
+        ss << ids[0];
         for( std::size_t i = 1, c = ids.size(); i < c; ++i )
             ss << "." << ids[i];
         throw std::runtime_error( "Cannot find structure type of: " + ss.str() );
@@ -1648,6 +1653,37 @@ void Program::linkProgram( Program* program )
     }
 }
 
+std::string Program::preprocessTemplate( const std::string& content, const std::vector< std::string >& types )
+{
+    std::regex r( "\\?\\{(\\d+)\\}" );
+    std::smatch m;
+    std::stringstream ss;
+    std::string s = content;
+    std::size_t idx;
+    while( true )
+    {
+        if( std::regex_search( s, m, r ) )
+        {
+            ss << m.prefix().str();
+            if( m.size() > 1 )
+            {
+                std::stringstream c( m[1].str() );
+                c >> idx;
+                if( idx < 0 || idx >= types.size() )
+                    throw std::runtime_error( "Template type index out of bounds: " + std::to_string( idx ) );
+                ss << types[idx];
+            }
+            s = m.suffix().str();
+        }
+        else
+        {
+            ss << s;
+            break;
+        }
+    }
+    return ss.str();
+}
+
 void Program::save( const std::string& v )
 {
     m_stack.push( v );
@@ -1797,8 +1833,12 @@ void Program::buildConstantBool( bool v )
     m_builtExpressions.push_back( ExpressionPtr( new ConstantBool( v ) ) );
 }
 
-void Program::buildValue( const std::vector< std::string >& ids )
+void Program::buildValue()
 {
+    std::vector< std::string > ids;
+    std::size_t p = restore();
+    while( getStackSize() > p )
+        ids.insert( ids.begin(), load() );
     m_builtExpressions.push_back( ExpressionPtr( new Value( ids ) ) );
 }
 
@@ -2041,4 +2081,29 @@ void Program::buildYield()
     auto t = m_builtExpressions.back();
     m_builtExpressions.pop_back();
     m_builtExpressions.push_back( ExpressionPtr( new Yield( t ) ) );
+}
+
+void Program::buildTemplateDefinition()
+{
+    std::string content = load();
+    std::string id = load();
+    if( templates.count( id ) )
+        throw std::runtime_error( "There is already registered template under name: " + id );
+    templates[id] = content;
+}
+
+void Program::buildTemplateImplementation()
+{
+    std::vector< std::string > types;
+    std::size_t p = restore();
+    while( m_stack.size() > p )
+    {
+        types.insert( types.begin(), m_stack.top() );
+        m_stack.pop();
+    }
+    std::string id = load();
+    if( !templates.count( id ) )
+        throw std::runtime_error( "There is no registered template: " + id );
+    ProgramPtr ptr( this, [=]( Program* program ){} );
+    Builder::implementTemplate( ptr, templates[id], types );
 }

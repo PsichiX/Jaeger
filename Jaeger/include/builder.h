@@ -19,6 +19,8 @@ public:
         AM_ASM_OUTPUT
     };
 
+    static bool implementTemplate( ProgramPtr& program, const std::string& content, const std::vector< std::string >& types );
+
     Builder( const std::vector< std::string >& args );
     ~Builder();
 

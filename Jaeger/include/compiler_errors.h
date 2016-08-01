@@ -73,8 +73,12 @@ namespace Errors
     template<> const std::string control< pegtl::star< Grammar::whitespaces, Grammar::directive_if_elif > >::errorMessage = "expected optional list of `elif` statements";
     template<> const std::string control< pegtl::opt< Grammar::whitespaces, Grammar::directive_if_else > >::errorMessage = "expected optional `else` statement";
     template<> const std::string control< pegtl::if_then_else< pegtl::seq< Grammar::whitespaces, Grammar::function_call >, pegtl::success, Grammar::Flags::push_empty_expression > >::errorMessage = "expected optional function call";
+    template<> const std::string control< Grammar::template_definition_body >::errorMessage = "expected template definition body";
+    template<> const std::string control< pegtl::string< '>', ']' > >::errorMessage = "expected `>]` sequence";
+    template<> const std::string control< pegtl::plus< Grammar::whitespaces, Grammar::identifier_saved > >::errorMessage = "expected non-empty list of identifiers";
     template<> const std::string control< pegtl::eof >::errorMessage = "expected end of file character";
     template<> const std::string control< pegtl::success >::errorMessage = "expected dummy success";
+    template<> const std::string control< Grammar::Flags::store_values_stack >::errorMessage = "expected flag: store values stack";
     template<> const std::string control< Grammar::Flags::store_expressions_stack >::errorMessage = "expected flag: store expressions stack";
     template<> const std::string control< Grammar::Flags::store_conditions_stack >::errorMessage = "expected flag: store conditions stack";
     template<> const std::string control< Grammar::Flags::push_sections_target >::errorMessage = "expected flag: push sections target";

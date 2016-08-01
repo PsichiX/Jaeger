@@ -61,7 +61,7 @@
 		</Compiler>
 		<Unit filename="include/builder.h" />
 		<Unit filename="include/compiler_actions.h" />
-		<Unit filename="include/errors.h" />
+		<Unit filename="include/compiler_errors.h" />
 		<Unit filename="include/grammar.h" />
 		<Unit filename="include/main.h" />
 		<Unit filename="include/program.h" />

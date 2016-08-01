@@ -77,6 +77,10 @@ namespace Grammar
     struct function_body : pegtl::star< whitespaces_any, function_statement > {};
     struct function_args : pegtl::star< whitespaces_any, field > {};
     struct function_definition : pegtl::if_must< pegtl::one< '[' >, whitespaces_any, identifier_saved, pegtl::if_then_else< pegtl::seq< whitespaces, identifier_saved >, pegtl::success, Flags::push_empty_value >, function_args, function_body, whitespaces_any, pegtl::one< ']' > > {};
+    struct template_definition_body : pegtl::until< pegtl::string< '>', ']' > > {};
+    struct template_definition : pegtl::if_must< pegtl::seq< pegtl::string< '[', '<' >, whitespaces_any, pegtl::string< 't', 'e', 'm', 'p', 'l', 'a', 't', 'e' >, whitespaces >, identifier_saved, whitespaces, template_definition_body > {};
+    struct template_implementation : pegtl::if_must< pegtl::seq< pegtl::string< '[', '<' >, whitespaces_any, pegtl::string< 'i', 'm', 'p', 'l', 'e', 'm', 'e', 'n', 't' >, whitespaces >, identifier_saved, Flags::store_values_stack, pegtl::plus< whitespaces, identifier_saved >, whitespaces_any, pegtl::string< '>', ']' > > {};
+    struct templates : pegtl::sor< template_definition, template_implementation > {};
     struct directive_strict : pegtl::if_must< pegtl::string< 's', 't', 'r', 'i', 'c', 't' >, pegtl::success > {};
     struct directive_import : pegtl::if_must< pegtl::seq< pegtl::string< 'i', 'm', 'p', 'o', 'r', 't' >, whitespaces >, string > {};
     struct directive_start : pegtl::if_must< pegtl::seq< pegtl::string< 's', 't', 'a', 'r', 't' >, whitespaces >, identifier_saved > {};
@@ -86,10 +90,11 @@ namespace Grammar
     struct directive_marshal : pegtl::if_must< pegtl::seq< pegtl::string< 'm', 'a', 'r', 's', 'h', 'a', 'l' >, whitespaces >, pegtl::string< 'f', 'r', 'o', 'm' >, whitespaces, pegtl::sor< directive_marshal_assembly_jaeger, directive_marshal_jaeger_assembly > > {};
     struct directive_asm_global : directive_asm {};
     struct directives_global : pegtl::if_must< pegtl::one< '/' >, whitespaces_any, pegtl::sor< directive_strict, directive_import, directive_start, directive_jaegerify, directive_marshal, directive_asm_global >, whitespaces_any, pegtl::one< '/' > > {};
-    struct statement : pegtl::seq< pegtl::sor< directives_global, structure, function_definition >, whitespaces_any > {};
+    struct statement : pegtl::seq< pegtl::sor< templates, directives_global, structure, function_definition >, whitespaces_any > {};
     struct statements : pegtl::star< statement, whitespaces_any > {};
     struct grammar : pegtl::must< pegtl::opt< pegtl::sor< comment, pegtl::shebang >, whitespaces_any >, statements, whitespaces_any, pegtl::eof > {};
     struct grammar_function_definition : function_definition {};
+    struct grammar_template_body : pegtl::star< pegtl::sor< structure, function_definition >, whitespaces_any > {};
 }
 
 #endif

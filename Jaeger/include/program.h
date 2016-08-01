@@ -383,6 +383,7 @@ public:
     bool extractFieldAssembly( const std::string& input, std::string& outName, std::string& outType );
     void loadImports( Builder* builder );
     void linkProgram( Program* program );
+    std::string preprocessTemplate( const std::string& content, const std::vector< std::string >& types );
     void save( const std::string& v );
     std::string load();
     void discard();
@@ -403,7 +404,7 @@ public:
     void buildConstantString( const std::string& v );
     void buildConstantNull();
     void buildConstantBool( bool v );
-    void buildValue( const std::vector< std::string >& ids );
+    void buildValue();
     void buildFunctionCallSection();
     void buildFunctionCall();
     void buildAsm( bool isGlobal );
@@ -419,6 +420,8 @@ public:
     void buildElse();
     void buildWhile();
     void buildYield();
+    void buildTemplateDefinition();
+    void buildTemplateImplementation();
 
     std::string startFunction;
     std::vector< std::string > imports;
@@ -428,6 +431,7 @@ public:
     std::map< std::string, JaegerifyData > jaegerified;
     std::map< std::string, StructurePtr > structures;
     std::map< std::string, FunctionPtr > functions;
+    std::map< std::string, std::string > templates;
 
 private:
     bool m_strict;

@@ -1,6 +1,6 @@
 #include "../include/builder.h"
 #include "../include/grammar.h"
-#include "../include/errors.h"
+#include "../include/compiler_errors.h"
 #include "../include/compiler_actions.h"
 #include <i4/vm.h>
 #include <pegtl/analyze.hh>
@@ -8,6 +8,13 @@
 #include <regex>
 #include <fstream>
 #include <chrono>
+
+bool Builder::implementTemplate( ProgramPtr& program, const std::string& content, const std::vector< std::string >& types )
+{
+    std::string c = program->preprocessTemplate( content, types );
+    pegtl::analyze< Grammar::grammar_template_body >();
+    return pegtl::parse< Grammar::grammar_template_body, CompilerActions::actions, Errors::control >( c, "<template>", program );
+}
 
 Builder::Builder( const std::vector< std::string >& args )
 : m_printPST( false )

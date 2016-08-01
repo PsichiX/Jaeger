@@ -174,11 +174,7 @@ namespace CompilerActions
     {
         static void apply( const pegtl::input& in, ProgramPtr& program )
         {
-            std::vector< std::string > ids;
-            std::size_t p = program->restore();
-            while( program->getStackSize() > p )
-                ids.push_back( program->load() );
-            program->buildValue( ids );
+            program->buildValue();
         }
     };
 
@@ -227,6 +223,32 @@ namespace CompilerActions
         static void apply( const pegtl::input& in, ProgramPtr& program )
         {
             program->buildFunction();
+        }
+    };
+
+    template<> struct actions< Grammar::template_definition_body >
+    {
+        static void apply( const pegtl::input& in, ProgramPtr& program )
+        {
+            std::string v = in.string();
+            v = v.substr( 0, v.size() - 2 );
+            program->save( v );
+        }
+    };
+
+    template<> struct actions< Grammar::template_definition >
+    {
+        static void apply( const pegtl::input& in, ProgramPtr& program )
+        {
+            program->buildTemplateDefinition();
+        }
+    };
+
+    template<> struct actions< Grammar::template_implementation >
+    {
+        static void apply( const pegtl::input& in, ProgramPtr& program )
+        {
+            program->buildTemplateImplementation();
         }
     };
 
