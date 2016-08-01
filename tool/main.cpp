@@ -77,7 +77,8 @@ int main( int argc, char* argv[] )
             argMode = AM_NONE;
         }
     }
-    std::string stdPath = getenv( "JAEGER_STD" );
+    auto cstdPath = getenv( "JAEGER_STD" );
+    std::string stdPath = cstdPath ? cstdPath : "";
     if( stdPath.empty() )
     {
         std::cout << "There is no registered JAEGER_STD environment variable that specify Jaeger standard libraries path!" << std::endl;
