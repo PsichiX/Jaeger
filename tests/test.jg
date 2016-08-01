@@ -8,13 +8,13 @@
 # coroutine is just a function with YIELD directive in it.
 # YIELD directive tells compiler to pause function execution in that place,
 # and resume it when application is not busy.
+# If we yield another coroutine, then current coroutine will not continue
+# until coroutine that we wait for will complete.
 [countdown <v Int>
 	/while (greater v 0) then [
-		(roar "Coroutine: " & v & "\n")
+		(roar "Countdown: " & v & "\n")
 		/set v (sub v 1)/
 		/yield (waitForMilliseconds 1000)/
-		(roarLine "After coroutine yield!")
-		#/yield/
 	]/
 	(roarLine "Kaboom!")
 ]
@@ -25,7 +25,6 @@
 	/while (greater ms (sub (currentTimeSteadyMS) start)) then [
 		/yield/
 	]/
-	(roar "waitForMilliseconds end for: " & ms & "\n")
 ]
 
 # function called at program startup.
@@ -47,7 +46,7 @@
 
 	/set time (currentTimeSteadyMS)/
 	# `set` directive assigns value or function result to local variable.
-	###/set a 1/
+	/set a 1/
 	/set b 2.3/
 	/set c "4"/
 	/set d true/
@@ -87,12 +86,10 @@
 		(roarLine "a equals 1!")
 	] else [
 		(roarLine "WTF!")
-	]/###
+	]/
 
-	(roarLine "START!")
 	(countdown 5)
 	(roar "Main completed in: " & (sub (currentTimeSteadyMS) time) & "ms!\n")
-	(roarLine "END!")
 
 	# the very last expression is used as function result value.
 	0
