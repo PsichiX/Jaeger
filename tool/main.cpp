@@ -11,7 +11,8 @@ enum ArgMode
     AM_NONE,
     AM_SOURCE_DIR,
     AM_INTUICIO_PATH,
-    AM_JAEGER_PREPROCESSOR_PATH
+    AM_JAEGER_PREPROCESSOR_PATH,
+    AM_ASSEMBLER_OUTPUT
 };
 
 std::string string_replace( const std::string& val, const std::string& oldval, const std::string& newval )
@@ -38,6 +39,7 @@ int main( int argc, char* argv[] )
     std::string intuicioPath = "intuicio";
     std::string jaegerPreprocessorPath = "I4Jaeger";
     bool profile = false;
+    std::string assemblerOutputPath;
     std::vector< std::string > a;
     for( int i = 1; i < argc; ++i )
     {
@@ -58,6 +60,8 @@ int main( int argc, char* argv[] )
                 argMode = AM_JAEGER_PREPROCESSOR_PATH;
             else if( arg == "-p" || arg == "--profile" )
                 profile = true;
+            else if( arg == "-ao" || arg == "--assembler-output" )
+                argMode = AM_ASSEMBLER_OUTPUT;
             else
                 a.push_back( arg );
         }
@@ -76,6 +80,11 @@ int main( int argc, char* argv[] )
             jaegerPreprocessorPath = arg;
             argMode = AM_NONE;
         }
+        else if( argMode == AM_ASSEMBLER_OUTPUT )
+        {
+            assemblerOutputPath = arg;
+            argMode = AM_NONE;
+        }
     }
     auto cstdPath = getenv( "JAEGER_STD" );
     std::string stdPath = cstdPath ? cstdPath : "";
@@ -88,15 +97,27 @@ int main( int argc, char* argv[] )
     intuicioPath = string_replace( intuicioPath, "\\", "\\\\" );
     jaegerPreprocessorPath = string_replace( jaegerPreprocessorPath, "\\", "\\\\" );
     stdPath = string_replace( stdPath, "\\", "\\\\" );
+    assemblerOutputPath = string_replace( assemblerOutputPath, "\\", "\\\\" );
     #endif
     std::stringstream ss;
     ss << intuicioPath;
     for( auto& v : a )
         ss << " " << v;
-    ss << ( profile ? " --profile" : "" ) << " -epp " << jaegerPreprocessorPath << ( profile ? " --profile" : "" ) << " -sd \"" << stdPath << "\"";
-    for( auto& sd : sourceDirs )
-        ss << " -sd \"" << sd << "\"";
-    ss << " -- -ep I4Run -mcs 8" << ( profile ? " --profile" : "" );
+    ss << ( profile ? " --profile" : "" );
+    if( assemblerOutputPath.empty() )
+    {
+        ss << " -epp " << jaegerPreprocessorPath << ( profile ? " --profile" : "" ) << " -sd \"" << stdPath << "\"";
+        for( auto& sd : sourceDirs )
+            ss << " -sd \"" << sd << "\"";
+        ss << " -- -ep I4Run -mcs 8" << ( profile ? " --profile" : "" );
+    }
+    else
+    {
+        ss << " -epp " << jaegerPreprocessorPath << ( profile ? " --profile" : "" ) << " -sd \"" << stdPath << "\"";
+        for( auto& sd : sourceDirs )
+            ss << " -sd \"" << sd << "\"";
+        ss << " -ao \"" << assemblerOutputPath << "\"";
+    }
     #ifdef DEBUG
     std::cout << ss.str() << std::endl;
     #endif

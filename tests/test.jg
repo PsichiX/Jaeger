@@ -6,6 +6,9 @@
 # `import` directive put code from file into program.
 /import "std.jg"/
 
+# template is a set of code that can be implemented by replacing `?{N}`
+# sequences with types used in template implementation.
+# templates are the best choice for making arrays, and other containers.
 [<template Temp
 	{Temp?{0}
 		<value ?{0}>
@@ -23,6 +26,8 @@
 	]
 >]
 
+# here Temp template will be implemented for Int type so TempInt structure
+# will be exposed.
 [<implement Temp Int>]
 
 # coroutine is just a function with YIELD directive in it.
@@ -108,13 +113,12 @@
 		(roarLine "WTF!")
 	]/
 
-	/let <temp TempInt>/
-	/set temp (add (TempInt -5) (TempInt 5))/
-
 	(countdown 5)
 	(roar "Main completed in: " & (sub (currentTimeSteadyMS) time) & "ms!\n")
 
+	/let <temp TempInt>/
+	/set temp (add (TempInt -5) (TempInt 5))/
+
 	# the very last expression is used as function result value.
 	temp.value
-	#0
 ]

@@ -1651,6 +1651,12 @@ void Program::linkProgram( Program* program )
             throw std::runtime_error( "Cannot merge function! There is already existing function: " + f.first );
         functions[f.first] = f.second;
     }
+    for( auto& t : program->templates )
+    {
+        if( templates.count( t.first ) )
+            throw std::runtime_error( "Cannot merge template! There is already existing template: " + t.first );
+        templates[t.first] = t.second;
+    }
 }
 
 std::string Program::preprocessTemplate( const std::string& content, const std::vector< std::string >& types )

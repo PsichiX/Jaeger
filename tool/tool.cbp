@@ -11,7 +11,7 @@
 				<Option object_output="obj/Win/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="../tests/test.jg" />
+				<Option parameters="../tests/test.jg -ao ../tests/build.i4s" />
 				<Compiler>
 					<Add option="-g" />
 					<Add option="-DDEBUG" />
