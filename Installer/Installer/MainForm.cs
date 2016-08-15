@@ -82,7 +82,8 @@ namespace Installer
                 var installationPath = Path.GetFullPath(pathTextBox.Text);
                 var path = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine);
                 if (!path.Split(';').Contains(installationPath))
-                    Environment.SetEnvironmentVariable("PATH", path + ";" + installationPath, EnvironmentVariableTarget.Machine);
+                    path += ";" + installationPath;
+                Environment.SetEnvironmentVariable("PATH", path, EnvironmentVariableTarget.Machine);
             }
             if (registerStdCheckBox.Checked)
             {
