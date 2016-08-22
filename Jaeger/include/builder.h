@@ -40,7 +40,6 @@ private:
     std::string getPathDir( const std::string& path );
 
     std::stack< std::string > m_dirs;
-    std::map< std::string, std::string > m_imports;
     I4::VM::LoadFileListenerPtr m_loadFileListener;
     bool m_printPST;
     std::size_t m_stackSize;

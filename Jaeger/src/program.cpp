@@ -9,6 +9,16 @@
 #include <chrono>
 #include <regex>
 
+Program::Exception::Exception( Program* program, const std::string& message )
+: std::runtime_error( ( program ? "[In file: " + program->getInputPath() + "]\n" : "" ) + message )
+{
+}
+
+Program::LinkException::LinkException( Program* linkedProgram, Program* program, const std::string& message )
+: std::runtime_error( ( linkedProgram && program ? "[While linking: " + linkedProgram->getInputPath() + " into: " + program->getInputPath() + "]\n" : "" ) + message )
+{
+}
+
 Program::Field::Field( const std::string& i, const std::string& t )
 : id( i )
 , type( t )
@@ -43,10 +53,10 @@ void Program::Field::validate( Builder* builder, Program* program )
     {
         std::size_t found = assembly.find( ':' );
         if( found == std::string::npos )
-            throw std::runtime_error( "Wrong format of field assembly: " + assembly );
+            throw Exception( program, "Wrong format of field assembly: " + assembly );
     }
     if( !type.empty() && !program->structures.count( type ) )
-        throw std::runtime_error( "Cannot find type: " + type + " of field: " + id );
+        throw Exception( program, "Cannot find type: " + type + " of field: " + id );
 }
 
 void Program::Field::assemble( std::ostream& output )
@@ -89,7 +99,7 @@ void Program::Structure::validate( Builder* builder, Program* program )
     {
         std::stringstream ss;
         ss << ex.what() << std::endl << "Error in structure: " << id;
-        throw std::runtime_error( ss.str() );
+        throw Exception( program, ss.str() );
     }
 }
 
@@ -101,7 +111,7 @@ void Program::Structure::assemble( std::ostream& output )
         f->assemble( output );
         output << "; ";
     }
-    output << "___refcount___:i32; };" << std::endl;
+    output << "___refcount___:i32; ___disposing___:i8; };" << std::endl;
     output << std::endl;
     output << "routine " << id << "_new():*" << id << std::endl;
     output << "<this:*" << id << ">" << std::endl;
@@ -111,6 +121,7 @@ void Program::Structure::assemble( std::ostream& output )
         if( f->assembly.empty() )
             output << "mov void null => $this->$" << f->id << ";" << std::endl;
     output << "mov void 0:i32 => $this->$___refcount___;" << std::endl;
+    output << "mov void 0:i8 => $this->$___disposing___;" << std::endl;
     output << "ret $this;" << std::endl;
     output << "};" << std::endl;
     output << std::endl;
@@ -118,9 +129,7 @@ void Program::Structure::assemble( std::ostream& output )
     output << "<isnil:i8>" << std::endl;
     output << "{" << std::endl;
     output << "nil $this => $isnil;" << std::endl;
-    output << "jif $isnil %failure %test;" << std::endl;
-    output << "test:" << std::endl;
-    output << "jif $this->$___refcount___ %success %failure;" << std::endl;
+    output << "jif $isnil %failure %success;" << std::endl;
     output << "success:" << std::endl;
     output << "add void $this->$___refcount___ 1:i32 => $this->$___refcount___;" << std::endl;
     output << "failure:" << std::endl;
@@ -130,8 +139,10 @@ void Program::Structure::assemble( std::ostream& output )
     output << "<isnil:i8>" << std::endl;
     output << "{" << std::endl;
     output << "nil $this => $isnil;" << std::endl;
-    output << "jif $isnil %failure %test;" << std::endl;
-    output << "test:" << std::endl;
+    output << "jif $isnil %failure %testdisposing;" << std::endl;
+    output << "testdisposing:" << std::endl;
+    output << "jif $this->$___disposing___ %failure %testrefcount;" << std::endl;
+    output << "testrefcount:" << std::endl;
     output << "jif $this->$___refcount___ %success %failure;" << std::endl;
     output << "success:" << std::endl;
     output << "sub void $this->$___refcount___ 1:i32 => $this->$___refcount___;" << std::endl;
@@ -139,6 +150,7 @@ void Program::Structure::assemble( std::ostream& output )
     output << "delete:" << std::endl;
     output << "call @" << id << "_Ref($this);" << std::endl;
     output << "cpush $stack void $this;" << std::endl;
+    output << "mov void 1:i8 => $this->$___disposing___;" << std::endl;
     output << "call @" << id << "_Dispose__" << id << "($stack);" << std::endl;
     for( auto& f : fields )
         if( f->assembly.empty() )
@@ -333,7 +345,7 @@ void Program::Value::validate( Builder* builder, Program* program, Function* fun
         ss << ids[0];
         for( std::size_t i = 1, c = ids.size(); i < c; ++i )
             ss << "." << ids[i];
-        throw std::runtime_error( "Cannot find structure type of: " + ss.str() );
+        throw Exception( program, "Cannot find structure type of: " + ss.str() );
     }
     setResultType( s->id );
 }
@@ -385,14 +397,14 @@ void Program::FunctionCall::validate( Builder* builder, Program* program, Functi
         ss << "_" << a->getResultType();
     }
     if( !program->functions.count( ss.str() ) )
-        throw std::runtime_error( "There is no function with signature: " + ss.str() );
+        throw Exception( program, "There is no function with signature: " + ss.str() );
     m_uid = ss.str();
     Function* f = program->functions[ss.str()].get();
     // TODO: test if it will not be an overhead.
     f->validate( builder, program );
     setResultType( f->type );
     if( program->isStrict() && getResultType().empty() )
-        throw std::runtime_error( "In strict mode cannot call to function without return type!" );
+        throw Exception( program, "In strict mode cannot call to function without return type!" );
     m_coroutine = f->isCoroutine();
 }
 
@@ -440,7 +452,7 @@ void Program::Asm::validate( Builder* builder, Program* program, Function* func 
         return;
     isValidated = true;
     if( program->isStrict() )
-        throw std::runtime_error( "In strict mode asm expressions are not allowed!" );
+        throw Exception( program, "In strict mode asm expressions are not allowed!" );
 }
 
 void Program::Asm::assemble( std::ostream& output, bool dropValue )
@@ -474,13 +486,13 @@ void Program::Set::validate( Builder* builder, Program* program, Function* func 
         return;
     isValidated = true;
     if( program->isStrict() )
-        throw std::runtime_error( "In strict mode set expressions are not allowed!" );
+        throw Exception( program, "In strict mode set expressions are not allowed!" );
     if( value->type != T_VALUE )
-        throw std::runtime_error( "Trying to perform set operation on non-variable!" );
+        throw Exception( program, "Trying to perform set operation on non-variable!" );
     value->validate( builder, program, func );
     data->validate( builder, program, func );
     if( data->getResultType().empty() )
-        throw std::runtime_error( "Trying to perform set operation with void-expression!" );
+        throw Exception( program, "Trying to perform set operation with void-expression!" );
 }
 
 void Program::Set::assemble( std::ostream& output, bool dropValue )
@@ -532,16 +544,16 @@ void Program::Condition::validate( Builder* builder, Program* program, Function*
         return;
     isValidated = true;
     if( program->isStrict() )
-        throw std::runtime_error( "In strict mode conditions are not allowed!" );
+        throw Exception( program, "In strict mode conditions are not allowed!" );
     if( conditions.empty() )
-        throw std::runtime_error( "Condition without body detected!" );
+        throw Exception( program, "Condition without body detected!" );
     for( auto c = conditions.begin(); c != conditions.end(); ++c )
     {
         if( c->condition )
         {
             c->condition->validate( builder, program, func );
             if( c->condition->getResultType() != "Bool" )
-                throw std::runtime_error( "Condition test accepts only boolean values!" );
+                throw Exception( program, "Condition test accepts only boolean values!" );
             if( c->condition->type == T_CONSTANT_BOOL )
             {
                 ConstantBool* b = (ConstantBool*)c->condition.get();
@@ -623,14 +635,14 @@ void Program::While::validate( Builder* builder, Program* program, Function* fun
         return;
     isValidated = true;
     if( program->isStrict() )
-        throw std::runtime_error( "In strict mode while-loops are not allowed!" );
+        throw Exception( program, "In strict mode while-loops are not allowed!" );
     if( !condition )
-        throw std::runtime_error( "Trying to get non-existing condition value!" );
+        throw Exception( program, "Trying to get non-existing condition value!" );
     condition->validate( builder, program, func );
     if( condition->getResultType() != "Bool" )
-        throw std::runtime_error( "While-loop test accepts only boolean values!" );
+        throw Exception( program, "While-loop test accepts only boolean values!" );
     if( condition->type == T_CONSTANT_BOOL && !((ConstantBool*)condition.get())->value )
-        throw std::runtime_error( "Always false while-loop test detected!" );
+        throw Exception( program, "Always false while-loop test detected!" );
     for( auto& e : expressions )
         e->validate( builder, program, func );
 }
@@ -677,14 +689,14 @@ void Program::Yield::validate( Builder* builder, Program* program, Function* fun
         return;
     isValidated = true;
     if( program->isStrict() )
-        throw std::runtime_error( "In strict mode yield is not allowed!" );
+        throw Exception( program, "In strict mode yield is not allowed!" );
     if( data )
     {
         data->validate( builder, program, func );
         if( data->type != Expression::T_FUNCTION_CALL )
-            throw std::runtime_error( "Trying to yield value other than function call!" );
+            throw Exception( program, "Trying to yield value other than function call!" );
         if( !((FunctionCall*)data.get())->isCoroutine() )
-            throw std::runtime_error( "Trying to yield result of non-coroutine function call!" );
+            throw Exception( program, "Trying to yield result of non-coroutine function call!" );
     }
     func->markCoroutine();
 }
@@ -747,14 +759,14 @@ void Program::Function::validate( Builder* builder, Program* program )
     if( program->isStrict() )
     {
         if( type.empty() )
-            throw std::runtime_error( "In strict mode function: " + id + " must have a return type!" );
+            throw Exception( program, "In strict mode function: " + id + " must have a return type!" );
         if( expressions.size() != 1 )
-            throw std::runtime_error( "In strict mode function: " + id + " must have only one body expression!" );
+            throw Exception( program, "In strict mode function: " + id + " must have only one body expression!" );
         if( !vars.empty() )
-            throw std::runtime_error( "In strict mode function: " + id + " cannot have any local variable!" );
+            throw Exception( program, "In strict mode function: " + id + " cannot have any local variable!" );
     }
     if( !type.empty() && !program->structures.count( type ) )
-        throw std::runtime_error( "Cannot find function: " + id + " return type: " + type );
+        throw Exception( program, "Cannot find function: " + id + " return type: " + type );
     for( auto& a : args )
         a->validate( builder, program );
     for( auto& v : vars )
@@ -762,13 +774,13 @@ void Program::Function::validate( Builder* builder, Program* program )
     for( auto& e : expressions)
         e->validate( builder, program, this );
     if( m_coroutine && !type.empty() )
-        throw std::runtime_error( "Function: " + id + " cannot have return value because it's coroutine!" );
+        throw Exception( program, "Function: " + id + " cannot have return value because it's coroutine!" );
     if( !returnPlacement && !constructor && !disposal && jaegerifiedId.empty() && !type.empty() && expressions.empty() )
-        throw std::runtime_error( "Function: " + id + " must return value!" );
+        throw Exception( program, "Function: " + id + " must return value!" );
     if( !type.empty() && !expressions.empty() && expressions.back()->type != Expression::T_CONSTANT_NULL && expressions.back()->getResultType() != type )
     {
         std::string t = expressions.back()->getResultType();
-        throw std::runtime_error( "Function: " + id + " last expression type: " + (t.empty() ? "void" : t) + " does not match function type: " + type );
+        throw Exception( program, "Function: " + id + " last expression type: " + (t.empty() ? "void" : t) + " does not match function type: " + type );
     }
 }
 
@@ -806,11 +818,11 @@ void Program::Function::assemble( std::ostream& output, Program* program )
     else if( !jaegerifiedId.empty() )
     {
         if( !program->jaegerified.count( jaegerifiedId ) )
-            throw std::runtime_error( "Cannot assemble jaegerified function! There is no jaegerified meta information for: " + jaegerifiedId );
+            throw Exception( program, "Cannot assemble jaegerified function! There is no jaegerified meta information for: " + jaegerifiedId );
         JaegerifyData& data = program->jaegerified[jaegerifiedId];
         const auto& nm = program->getNativeModule( jaegerifiedId );
         if( !nm )
-            throw std::runtime_error( "Cannot assemble jaegerified function! There is no jaegerified compiled routine for: " + jaegerifiedId );
+            throw Exception( program, "Cannot assemble jaegerified function! There is no jaegerified compiled routine for: " + jaegerifiedId );
         output << "routine " << makeUID() << "(stack:i32):" << std::endl;
         std::size_t i = 0;
         std::size_t j = 0;
@@ -831,7 +843,7 @@ void Program::Function::assemble( std::ostream& output, Program* program )
             output << "cpop $stack void => $" << (*it)->id << ";" << std::endl;
             program->marshallValue( output, *it, nm->args[j]->type->makeUID() );
         }
-        output << "call @" << data.method << "(";
+        output << "call @___" << data.module << "___" << data.method << "(";
         i = args.size();
         for( auto& a : args )
         {
@@ -1050,7 +1062,7 @@ void Program::Function::assemble( std::ostream& output, Program* program )
                 std::string name;
                 std::string type;
                 if( !program->extractFieldAssembly( v->assembly, name, type ) )
-                    throw std::runtime_error( "Wrong format of field assembly: " + v->assembly );
+                    throw Exception( program, "Wrong format of field assembly: " + v->assembly );
                 output << "mov void $state->$" << name << " => $" << name << ";" << std::endl;
             }
         }
@@ -1078,7 +1090,7 @@ void Program::Function::assemble( std::ostream& output, Program* program )
                 std::string name;
                 std::string type;
                 if( !program->extractFieldAssembly( v->assembly, name, type ) )
-                    throw std::runtime_error( "Wrong format of field assembly: " + v->assembly );
+                    throw Exception( program, "Wrong format of field assembly: " + v->assembly );
                 output << "mov void $" << name << " => $state->$" << name << ";" << std::endl;
             }
         }
@@ -1149,8 +1161,9 @@ std::string Program::Function::makeUID()
     return m_uid;
 }
 
-Program::Program()
-: m_strict( false )
+Program::Program( const std::string& inputPath )
+: m_inputPath( inputPath )
+, m_strict( false )
 , m_returnPlacement( false )
 {
 }
@@ -1210,13 +1223,20 @@ void Program::validate( Builder* builder )
     std::string tr;
     std::string tf;
     I4::CompilationState::Type* pt;
+    for( auto& i : implementations )
+    {
+        if( !templates.count( i.id ) )
+            throw Exception( this, "There is no registered template: " + i.id );
+        ProgramPtr ptr( this, [=]( Program* program ){} );
+        Builder::implementTemplate( ptr, templates[i.id], i.types );
+    }
     for( auto& j : jaegerified )
     {
         JaegerifyData& d = j.second;
         I4::VM vm;
         r = vm.buildRoutineHeader( d.routine, std::cout );
         if( !r )
-            throw std::runtime_error( "Cannot build routine: " + j.first + " from native module: " + d.module );
+            throw Exception( this, "Cannot build routine: " + j.first + " from native module: " + d.module );
         r->nativeModulePackage = d.module;
         r->nativeModuleMethod = r->id;
         m_nativeModules[j.first] = r;
@@ -1229,12 +1249,12 @@ void Program::validate( Builder* builder )
             if( pt && !tf.empty() )
             {
                 if( !verifyMarshalling( pt, tf ) )
-                    throw std::runtime_error( "Cannot build routine: " + j.first + " from native module: " + d.module + "! Routine return type does not match function type marshalling! Trying to marshall: " + tf + " to: " + tr );
+                    throw Exception( this, "Cannot build routine: " + j.first + " from native module: " + d.module + "! Routine return type does not match function type marshalling! Trying to marshall: " + tf + " to: " + tr );
             }
             else if( !pt && !tf.empty() )
-                throw std::runtime_error( "Cannot build routine: " + j.first + " from native module: " + d.module + "! Routine and function have different types! Trying to marshall: " + tf + " to: " + tr );
+                throw Exception( this, "Cannot build routine: " + j.first + " from native module: " + d.module + "! Routine and function have different types! Trying to marshall: " + tf + " to: " + tr );
             if( f->args.size() != r->args.size() )
-                throw std::runtime_error( "Cannot build routine: " + j.first + " from native module: " + d.module + "! Routine and function have different number of arguments!" );
+                throw Exception( this, "Cannot build routine: " + j.first + " from native module: " + d.module + "! Routine and function have different number of arguments!" );
             functions[f->makeUID()] = f;
             for( std::size_t i = 0, c = r->args.size(); i < c; ++i )
             {
@@ -1242,7 +1262,7 @@ void Program::validate( Builder* builder )
                 tr = pt->makeUID();
                 tf = f->args[i]->type;
                 if( !verifyMarshalling( pt, tf ) )
-                    throw std::runtime_error( "Cannot build routine: " + j.first + " from native module: " + d.module + "! Routine argument #" + std::to_string( i + 1 ) + " does not match function type marshalling! Trying to marshall: " + tf + " to: " + tr );
+                    throw Exception( this, "Cannot build routine: " + j.first + " from native module: " + d.module + "! Routine argument #" + std::to_string( i + 1 ) + " does not match function type marshalling! Trying to marshall: " + tf + " to: " + tr );
             }
         }
     }
@@ -1255,7 +1275,7 @@ void Program::validate( Builder* builder )
         {
             f = builder->makeFunction( "[" + ps->id + " " + ps->id + "]" );
             if( !f )
-                throw std::runtime_error( "Cannot create constructor function of type: " + ps->id );
+                throw Exception( this, "Cannot create constructor function of type: " + ps->id );
             f->constructor = s.second;
             functions[f->makeUID()] = f;
         }
@@ -1263,7 +1283,7 @@ void Program::validate( Builder* builder )
         {
             f = builder->makeFunction( "[" + ps->id + "_Dispose <this " + ps->id + ">]" );
             if( !f )
-                throw std::runtime_error( "Cannot create disposal function of type: " + ps->id );
+                throw Exception( this, "Cannot create disposal function of type: " + ps->id );
             f->disposal = s.second;
             functions[f->makeUID()] = f;
         }
@@ -1274,11 +1294,11 @@ void Program::validate( Builder* builder )
     {
         std::string sf = startFunction + "_";
         if( !functions.count( sf ) )
-            throw std::runtime_error( "Cannot find startup function: " + startFunction );
+            throw Exception( this, "Cannot find startup function: " + startFunction );
         if( functions[sf]->type != "Int" )
-            throw std::runtime_error( "Startup function does not return Int value: " + startFunction );
+            throw Exception( this, "Startup function does not return Int value: " + startFunction );
         if( functions[sf]->isCoroutine() )
-            throw std::runtime_error( "Startup function cannot be a coroutine: " + startFunction );
+            throw Exception( this, "Startup function cannot be a coroutine: " + startFunction );
     }
 }
 
@@ -1292,6 +1312,8 @@ I4::CompilationStatePtr Program::assemble( Builder* builder, std::size_t stackSi
     ss << "#intuicio 4.0;" << std::endl;
     ss << "#stack " << stackSize << ";" << std::endl;
     ss << "#pointersize 32;" << std::endl;
+    ss << "#import from [ResourcesManager:initialize] routine ResourcesManager_initialize():;" << std::endl;
+    ss << "#import from [ResourcesManager:cleanup] routine ResourcesManager_cleanup():;" << std::endl;
     ss << std::endl;
     ss << "<g_coroutinesUID:i32>;" << std::endl;
     ss << std::endl;
@@ -1377,7 +1399,7 @@ I4::CompilationStatePtr Program::assemble( Builder* builder, std::size_t stackSi
         ss << a->content << std::endl;
     ss << std::endl;
     for( auto& j : jaegerified )
-        ss << "#import from [" << j.second.module << ":" << j.second.method << "] routine " << j.second.routine << ";" << std::endl;
+        ss << "#import from [" << j.second.module << ":" << j.second.method << "] routine ___" << j.second.module << "___" << j.second.routine << ";" << std::endl;
     ss << std::endl;
     for( auto& s : structures )
         s.second->assemble( ss );
@@ -1389,6 +1411,7 @@ I4::CompilationStatePtr Program::assemble( Builder* builder, std::size_t stackSi
         ss << "routine ___JAEGER_MAIN___():i32" << std::endl;
         ss << "<stack:i32, result:*Int, isnil:i8, test:i8>" << std::endl;
         ss << "{" << std::endl;
+        ss << "call @ResourcesManager_initialize();" << std::endl;
         ss << "mov void 1:i32 => $g_coroutinesUID;" << std::endl;
         for( auto& f : functions )
         {
@@ -1422,6 +1445,7 @@ I4::CompilationStatePtr Program::assemble( Builder* builder, std::size_t stackSi
         ss << "}[{" << std::endl;
         ss << "call @Int_Unref($result, $stack) => $result;" << std::endl;
         ss << "ctxd $stack;" << std::endl;
+        ss << "call @ResourcesManager_cleanup();" << std::endl;
         ss << "}];" << std::endl;
     }
     if( builder->canProfile() )
@@ -1527,7 +1551,7 @@ void Program::marshallValue( std::ostream& output, const FieldPtr& field, const 
         output << "conv $" << field->id << "->$value => $_" << field->id << ";" << std::endl;
         return;
     }
-    throw std::runtime_error( "There is no marshalling definition from value type: " + field->type + " to assembly type: " + asmType );
+    throw Exception( this, "There is no marshalling definition from value type: " + field->type + " to assembly type: " + asmType );
 }
 
 void Program::marshallObject( std::ostream& output, const std::string& id, const std::string& type, const std::string& asmType )
@@ -1569,7 +1593,7 @@ void Program::marshallObject( std::ostream& output, const std::string& id, const
         output << "conv $_" << id << " => $" << id << "->$value;" << std::endl;
         return;
     }
-    throw std::runtime_error( "There is no marshalling definition from assembly type: " + asmType + " to value type: " + type );
+    throw Exception( this, "There is no marshalling definition from assembly type: " + asmType + " to value type: " + type );
 }
 
 Program::Structure* Program::findValueStructure( const std::vector< std::string >& ids, Function* func )
@@ -1617,7 +1641,7 @@ void Program::loadImports( Builder* builder )
     {
         ProgramPtr p = builder->buildProgram( path, true );
         if( !p )
-            throw std::runtime_error( "Cannot build imported program: " + path );
+            throw Exception( this, "Cannot build imported program: " + path );
         linkProgram( p.get() );
     }
 }
@@ -1631,32 +1655,36 @@ void Program::linkProgram( Program* program )
             auto& d = jaegerified[j.first];
             auto& _d = program->jaegerified[j.first];
             if( d.routine != _d.routine )
-                throw std::runtime_error( "Cannot merge jaegerified: " + j.first + "! There is already existing jaegerify with different routine: " + d.routine );
+                throw LinkException( program, this, "Cannot merge jaegerified: " + j.first + "! There is already existing jaegerify with different routine: " + d.routine );
             if( d.func != _d.func )
-                throw std::runtime_error( "Cannot merge jaegerified: " + j.first + "! There is already existing jaegerify with different function!" );
+                throw LinkException( program, this, "Cannot merge jaegerified: " + j.first + "! There is already existing jaegerify with different function!" );
             if( d.module != _d.module )
-                throw std::runtime_error( "Cannot merge jaegerified: " + j.first + "! There is already existing jaegerify with different module: " + d.module);
+                throw LinkException( program, this, "Cannot merge jaegerified: " + j.first + "! There is already existing jaegerify with different module: " + d.module);
         }
         jaegerified[j.first] = program->jaegerified[j.first];
     }
     for( auto& s : program->structures )
     {
         if( structures.count( s.first ) )
-            throw std::runtime_error( "Cannot merge structure! There is already existing structure: " + s.first );
+            throw LinkException( program, this, "Cannot merge structure! There is already existing structure: " + s.first );
         structures[s.first] = s.second;
     }
     for( auto& f : program->functions )
     {
         if( functions.count( f.first ) )
-            throw std::runtime_error( "Cannot merge function! There is already existing function: " + f.first );
+            throw LinkException( program, this, "Cannot merge function! There is already existing function: " + f.first );
         functions[f.first] = f.second;
     }
     for( auto& t : program->templates )
     {
         if( templates.count( t.first ) )
-            throw std::runtime_error( "Cannot merge template! There is already existing template: " + t.first );
+            throw LinkException( program, this, "Cannot merge template! There is already existing template: " + t.first );
         templates[t.first] = t.second;
     }
+    for( auto& i : program->implementations )
+        implementations.push_back( i );
+    for( auto& a : program->globalAsm )
+        globalAsm.push_back( a );
 }
 
 std::string Program::preprocessTemplate( const std::string& content, const std::vector< std::string >& types )
@@ -1676,7 +1704,7 @@ std::string Program::preprocessTemplate( const std::string& content, const std::
                 std::stringstream c( m[1].str() );
                 c >> idx;
                 if( idx < 0 || idx >= types.size() )
-                    throw std::runtime_error( "Template type index out of bounds: " + std::to_string( idx ) );
+                    throw Exception( this, "Template type index out of bounds: " + std::to_string( idx ) );
                 ss << types[idx];
             }
             s = m.suffix().str();
@@ -1698,7 +1726,7 @@ void Program::save( const std::string& v )
 std::string Program::load()
 {
     if( m_stack.empty() )
-        throw std::runtime_error( "Cannot load value from stack - stack is empty!" );
+        throw Exception( this, "Cannot load value from stack - stack is empty!" );
     std::string v = m_stack.top();
     m_stack.pop();
     return v;
@@ -1707,7 +1735,7 @@ std::string Program::load()
 void Program::discard()
 {
     if( m_stack.empty() )
-        throw std::runtime_error( "Cannot discard value from stack - stack is empty!" );
+        throw Exception( this, "Cannot discard value from stack - stack is empty!" );
     m_stack.pop();
 }
 
@@ -1719,7 +1747,7 @@ void Program::store()
 std::size_t Program::restore()
 {
     if( m_stackPositions.empty() )
-        throw std::runtime_error( "Cannot restore stack position - positions stack is empty!" );
+        throw Exception( this, "Cannot restore stack position - positions stack is empty!" );
     std::size_t p = m_stackPositions.top();
     m_stackPositions.pop();
     return p;
@@ -1733,7 +1761,7 @@ void Program::storeExpressions()
 std::size_t Program::restoreExpressions()
 {
     if( m_expressionsPositions.empty() )
-        throw std::runtime_error( "Cannot restore expressions position - expressions positions stack is empty!" );
+        throw Exception( this, "Cannot restore expressions position - expressions positions stack is empty!" );
     std::size_t p = m_expressionsPositions.top();
     m_expressionsPositions.pop();
     return p;
@@ -1747,7 +1775,7 @@ void Program::storeConditions()
 std::size_t Program::restoreConditions()
 {
     if( m_conditionsPositions.empty() )
-        throw std::runtime_error( "Cannot restore conditions position - conditions positions stack is empty!" );
+        throw Exception( this, "Cannot restore conditions position - conditions positions stack is empty!" );
     std::size_t p = m_conditionsPositions.top();
     m_conditionsPositions.pop();
     return p;
@@ -1757,10 +1785,12 @@ void Program::buildStructure()
 {
     std::string id = load();
     if( structures.count( id ) )
-        throw std::runtime_error( "There is already existing structure: " + id );
+        throw Exception( this, "There is already existing structure: " + id );
     Structure* s = new Structure( id );
     s->fields = m_builtFields;
+    s->attributes = m_builtAttributes;
     m_builtFields.clear();
+    m_builtAttributes.clear();
     structures[ id ] = StructurePtr( s );
 }
 
@@ -1798,9 +1828,11 @@ void Program::buildFunction()
     std::string id = load();
     Function* f = new Function( id, type );
     f->args = m_builtArgs;
+    f->attributes = m_builtAttributes;
     m_builtArgs.clear();
+    m_builtAttributes.clear();
     if( functions.count( f->makeUID() ) )
-        throw std::runtime_error( "There is already existing function with signature: " + f->makeUID() );
+        throw Exception( this, "There is already existing function with signature: " + f->makeUID() );
     f->vars = m_builtVars;
     m_builtVars.clear();
     f->expressions = m_builtExpressions;
@@ -1857,14 +1889,14 @@ void Program::buildFunctionCallSection()
     while( m_builtExpressions.size() > p )
         m_builtExpressions.pop_back();
     if( m_sections.empty() )
-        throw std::runtime_error( "Function call sections target is empty!" );
+        throw Exception( this, "Function call sections target is empty!" );
     m_sections.top().push( exp );
 }
 
 void Program::buildFunctionCall()
 {
     if( m_sections.empty() )
-        throw std::runtime_error( "Function call sections target is empty!" );
+        throw Exception( this, "Function call sections target is empty!" );
     auto& q = m_sections.top();
     std::string id = load();
     FunctionCall* fc;
@@ -1913,7 +1945,7 @@ void Program::buildJaegerify()
         std::string m = load();
         std::string r = load();
         if( r.find( "routine" ) != 0 )
-            throw std::runtime_error( "Assembly routine need to start with `routine` keyword: " + r );
+            throw Exception( this, "Assembly routine need to start with `routine` keyword: " + r );
         r = std::string_trim( r.substr( 7 ) );
         JaegerifyData& data = jaegerified[r];
         data.routine = r;
@@ -1921,23 +1953,23 @@ void Program::buildJaegerify()
         data.module = m;
         std::size_t found = r.find( "(" );
         if( found == std::string::npos )
-            throw std::runtime_error( "Assembly routine does not have a name: " + r );
+            throw Exception( this, "Assembly routine does not have a name: " + r );
         data.method = std::string_trim( r.substr( 0, found ) );
     }
     else
     {
         if( jaegerified.count( m_lastFunctionDefinition ) )
-            throw std::runtime_error( "Cannot jaegerify function! Function is already jaegerified: " + m_lastFunctionDefinition );
+            throw Exception( this, "Cannot jaegerify function! Function is already jaegerified: " + m_lastFunctionDefinition );
         std::string m = load();
         if( !functions.count( m_lastFunctionDefinition ) )
-            throw std::runtime_error( "Cannot jaegerify function! Function not found: " + m_lastFunctionDefinition );
+            throw Exception( this, "Cannot jaegerify function! Function not found: " + m_lastFunctionDefinition );
         FunctionPtr f = functions[m_lastFunctionDefinition];
         if( !f->expressions.empty() )
-            throw std::runtime_error( "Cannot jaegerify function that have body expressions: " + m_lastFunctionDefinition );
+            throw Exception( this, "Cannot jaegerify function that have body expressions: " + m_lastFunctionDefinition );
         functions.erase( m_lastFunctionDefinition );
         std::string r = load();
         if( r.find( "routine" ) != 0 )
-            throw std::runtime_error( "Assembly routine need to start with `routine` keyword: " + r );
+            throw Exception( this, "Assembly routine need to start with `routine` keyword: " + r );
         r = std::string_trim( r.substr( 7 ) );
         JaegerifyData& data = jaegerified[m_lastFunctionDefinition];
         data.routine = r;
@@ -1945,7 +1977,7 @@ void Program::buildJaegerify()
         data.module = m;
         std::size_t found = r.find( "(" );
         if( found == std::string::npos )
-            throw std::runtime_error( "Assembly routine does not have a name: " + r );
+            throw Exception( this, "Assembly routine does not have a name: " + r );
         data.method = std::string_trim( r.substr( 0, found ) );
         f->jaegerifiedId = m_lastFunctionDefinition;
     }
@@ -1961,7 +1993,7 @@ void Program::buildMarshalFromAssembly()
         if( m.asmType == f && m.type == t )
         {
             if( m.assembly != a )
-                throw std::runtime_error( "Cannot define marshalling! There is already existing marshalling but with different definition! From: " + f + " to: " + t );
+                throw Exception( this, "Cannot define marshalling! There is already existing marshalling but with different definition! From: " + f + " to: " + t );
             return;
         }
     }
@@ -1982,7 +2014,7 @@ void Program::buildMarshalToAssembly()
         if( m.asmType == t && m.type == f )
         {
             if( m.assembly != a )
-                throw std::runtime_error( "Cannot define marshalling! There is already existing marshalling but with different definition! From: " + f + " to: " + t );
+                throw Exception( this, "Cannot define marshalling! There is already existing marshalling but with different definition! From: " + f + " to: " + t );
             return;
         }
     }
@@ -1996,7 +2028,7 @@ void Program::buildMarshalToAssembly()
 void Program::buildVariableSet()
 {
     if( m_builtExpressions.size() < 2 )
-        throw std::runtime_error( "Cannot obtain variable and it's value!" );
+        throw Exception( this, "Cannot obtain variable and it's value!" );
     ExpressionPtr d = m_builtExpressions.back();
     m_builtExpressions.pop_back();
     ExpressionPtr v = m_builtExpressions.back();
@@ -2024,7 +2056,7 @@ void Program::buildCond()
     while( m_builtExpressions.size() > p )
         m_builtExpressions.pop_back();
     if( m_builtExpressions.size() < 1 )
-        throw std::runtime_error( "Cannot obtain condition test value!" );
+        throw Exception( this, "Cannot obtain condition test value!" );
     ConditionData data;
     data.uid = ++Condition::s_testUID;
     data.condition = m_builtExpressions.back();
@@ -2042,7 +2074,7 @@ void Program::buildElif()
     while( m_builtExpressions.size() > p )
         m_builtExpressions.pop_back();
     if( m_builtExpressions.size() < 1 )
-        throw std::runtime_error( "Cannot obtain condition test value!" );
+        throw Exception( this, "Cannot obtain condition test value!" );
     ConditionData data;
     data.uid = ++Condition::s_testUID;
     data.condition = m_builtExpressions.back();
@@ -2074,7 +2106,7 @@ void Program::buildWhile()
     while( m_builtExpressions.size() > p )
         m_builtExpressions.pop_back();
     if( m_builtExpressions.size() < 1 )
-        throw std::runtime_error( "Cannot obtain loop test value!" );
+        throw Exception( this, "Cannot obtain loop test value!" );
     auto t = m_builtExpressions.back();
     m_builtExpressions.pop_back();
     m_builtExpressions.push_back( ExpressionPtr( new While( t, exp ) ) );
@@ -2083,7 +2115,7 @@ void Program::buildWhile()
 void Program::buildYield()
 {
     if( m_builtExpressions.size() < 1 )
-        throw std::runtime_error( "Cannot obtain loop test value!" );
+        throw Exception( this, "Cannot obtain loop test value!" );
     auto t = m_builtExpressions.back();
     m_builtExpressions.pop_back();
     m_builtExpressions.push_back( ExpressionPtr( new Yield( t ) ) );
@@ -2094,7 +2126,7 @@ void Program::buildTemplateDefinition()
     std::string content = load();
     std::string id = load();
     if( templates.count( id ) )
-        throw std::runtime_error( "There is already registered template under name: " + id );
+        throw Exception( this, "There is already registered template under name: " + id );
     templates[id] = content;
 }
 
@@ -2108,8 +2140,10 @@ void Program::buildTemplateImplementation()
         m_stack.pop();
     }
     std::string id = load();
-    if( !templates.count( id ) )
-        throw std::runtime_error( "There is no registered template: " + id );
-    ProgramPtr ptr( this, [=]( Program* program ){} );
-    Builder::implementTemplate( ptr, templates[id], types );
+    implementations.push_back( ImplementationData( id, types ) );
+}
+
+void Program::buildAttribute()
+{
+    m_builtAttributes.push_back( load() );
 }

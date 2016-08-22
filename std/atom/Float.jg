@@ -1,0 +1,137 @@
+/import "atom.jg"/
+/import "templates/Nullable.jg"/
+
+/jaegerify ~~
+	routine length(v:*i8):i32
+	~~ from String/
+
+/jaegerify ~~
+	routine f32_to_string_new(v:f32):*i8
+	~~ from String/
+
+{Float
+	~~ value:f32 ~~
+}
+
+[Float Float
+	/let <this Float>/
+	/asm ~~
+		call @Float_new() => $this;
+		mov void 0:f32 => $this->$value;
+		~~/
+	this
+]
+
+[clone Float <v Float>
+	/let <r Float>/
+	/if (not (isNull v)) then [
+		/set r 0.0/
+		/asm ~~ mov void $v->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[<implement Nullable Float>]
+
+[toInt Int <v Float>
+	/let <r Int>/
+	/if (not (isNull v)) then [
+		/set r 0/
+		/asm ~~ conv $v->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[toString String <v Float>
+	/let <r String>/
+	/if (not (isNull v)) then [
+		/set r (String)/
+		(String_Dispose r)
+		/asm ~~
+			call @___String___f32_to_string_new($v->$value) => $r->$buffer;
+			call @___String___length($r->$buffer) => $r->$length;
+			~~/
+	]/
+	r
+]
+
+[toBool Bool <v Float>
+	/let <r Bool>/
+	/if (not (isNull v)) then [
+		/set r false/
+		/asm ~~ conv $v->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[toHandle Handle <v Float>
+	/let <r Handle>/
+	/if (not (isNull v)) then [
+		/set r (Handle)/
+		/asm ~~ conv $v->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[add Float <a Float> <b Float>
+	/let <r Float>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r 0.0/
+		/asm ~~ add void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[sub Float <a Float> <b Float>
+	/let <r Float>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r 0.0/
+		/asm ~~ sub void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[mul Float <a Float> <b Float>
+	/let <r Float>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r 0.0/
+		/asm ~~ mul void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[div Float <a Float> <b Float>
+	/let <r Float>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r 0.0/
+		/asm ~~ div void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[equals Bool <a Float> <b Float>
+	/let <r Bool>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r false/
+		/asm ~~ eq void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[less Bool <a Float> <b Float>
+	/let <r Bool>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r false/
+		/asm ~~ ls void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[greater Bool <a Float> <b Float>
+	/let <r Bool>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r false/
+		/asm ~~ gr void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]

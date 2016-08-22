@@ -1,0 +1,136 @@
+/import "atom.jg"/
+
+/jaegerify ~~
+	routine print(format:*i8, ...):
+	~~ from IO/
+
+/jaegerify ~~
+	routine get_line_new():*i8
+	~~ from IO/
+
+/jaegerify ~~
+	routine scan_i32():i32
+	~~ from IO/
+
+/jaegerify ~~
+	routine scan_f32():f32
+	~~ from IO/
+
+/jaegerify ~~
+	routine scan_i8_bool():i8
+	~~ from IO/
+
+[roar <v Int>
+	/if (not (isNull v)) then [
+		/asm ~~ call @___IO___print("${i32}":*i8, $v->$value); ~~/
+	]/
+]
+
+[roar <v Float>
+	/if (not (isNull v)) then [
+		/asm ~~ call @___IO___print("${f32}":*i8, $v->$value); ~~/
+	]/
+]
+
+[roar <v String>
+	/if (not (isNull v)) then [
+		/asm ~~ call @___IO___print($v->$buffer); ~~/
+	]/
+]
+
+[roar <v Bool>
+	/if (not (isNull v)) then [
+		/asm ~~
+			jif $v->$value %true %false;
+			true:
+			call @___IO___print("true":*i8);
+			goto %done;
+			false:
+			call @___IO___print("false":*i8);
+			done:
+			~~/
+	]/
+]
+
+[roar <v Handle>
+	/if (not (isNull v)) then [
+		/asm ~~ call @___IO___print("#${i32}\n":*i8, $v->$value); ~~/
+	]/
+]
+
+[roarLine <v Int>
+	/if (not (isNull v)) then [
+		/asm ~~ call @___IO___print("${i32}\n":*i8, $v->$value); ~~/
+	]/
+]
+
+[roarLine <v Float>
+	/if (not (isNull v)) then [
+		/asm ~~ call @___IO___print("${f32}\n":*i8, $v->$value); ~~/
+	]/
+]
+
+[roarLine <v String>
+	/if (not (isNull v)) then [
+		/asm ~~ call @___IO___print("${*}\n":*i8, $v->$buffer); ~~/
+	]/
+]
+
+[roarLine <v Bool>
+	/if (not (isNull v)) then [
+		/asm ~~
+			jif $v->$value %true %false;
+			true:
+			call @___IO___print("true\n":*i8);
+			goto %done;
+			false:
+			call @___IO___print("false\n":*i8);
+			done:
+			~~/
+	]/
+]
+
+[roarLine <v Handle>
+	/if (not (isNull v)) then [
+		/asm ~~ call @___IO___print("#${i32}\n":*i8, $v->$value); ~~/
+	]/
+]
+
+[rapeInt Int
+	/let <r Int>/
+	/set r 0/
+	/asm ~~ call @___IO___scan_i32() => $r->$value; ~~/
+	r
+]
+
+[rapeFloat Float
+	/let <r Float>/
+	/set r 0.0/
+	/asm ~~ call @___IO___scan_f32() => $r->$value; ~~/
+	r
+]
+
+[rapeString String
+	/let <r String>/
+	/set r (String)/
+	(String_Dispose r)
+	/asm ~~
+		call @___IO___get_line_new() => $r->$buffer;
+		call @___String___length($r->$buffer) => $r->$length;
+		~~/
+	r
+]
+
+[rapeBool Bool
+	/let <r Bool>/
+	/set r false/
+	/asm ~~ call @___IO___scan_i8_bool() => $r->$value; ~~/
+	r
+]
+
+[rapeHandle Handle
+	/let <r Handle>/
+	/set r (Handle)/
+	/asm ~~ call @___IO___scan_i32() => $r->$value; ~~/
+	r
+]

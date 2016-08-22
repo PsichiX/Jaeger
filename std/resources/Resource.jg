@@ -1,0 +1,106 @@
+/import "atom.jg"/
+/import "templates/Nullable.jg"/
+
+/jaegerify ~~
+	routine loadProtocol(id:*i8, path:*i8):i8
+	~~	as [loadResourcesProtocol Bool <id String> <path String>]
+		from ResourcesManager/
+
+/jaegerify ~~
+	routine acquire(uri:*i8):*_Resource
+	~~ from ResourcesManager/
+
+/jaegerify ~~
+	routine acquireAsync(uri:*i8):*_Resource
+	~~ from ResourcesManager/
+
+/jaegerify ~~
+	routine release(resource:*_Resource):i8
+	~~ from ResourcesManager/
+
+/asm ~~
+	struct _Resource
+	{
+		header:i32;
+		status:i16;
+		protocolID:i16;
+		data:i64;
+	};
+	~~/
+
+{Resource
+	<uri String>
+	<isAcquired Bool>
+	~~ handler:*_Resource ~~
+}
+
+[Resource Resource
+	/let <this Resource>/
+	/asm ~~
+		call @Resource_new() => $this;
+		mov void null => $this->$handler;
+		~~/
+	/set this.uri ""/
+	/set this.isAcquired false/
+	this
+]
+
+[Resource Resource <uri String>
+	/let <this Resource>/
+	/set this (Resource)/
+	/set this.uri uri/
+	/set this.isAcquired false/
+	this
+]
+
+[Resource_Dispose <this Resource>
+	(release this)
+]
+
+[<implement Nullable Resource>]
+
+[acquire Bool <v Resource>
+	/let
+		<r Bool>
+		~~ status:i8 ~~
+		/
+	/set r false/
+	(release v)
+	/asm ~~
+		call @___ResourcesManager___acquire($v->$uri->$buffer) => $v->$handler;
+		nil $v->$handler => $status;
+		jif $status %failure %success;
+		success:
+		mov void 1:i8 => $r->$value;
+		failure:
+		~~/
+	/set v.isAcquired r/
+	r
+]
+
+[acquireAsync Bool <v Resource>
+	/let
+		<r Bool>
+		~~ status:i8 ~~
+		/
+	/set r false/
+	(release v)
+	/asm ~~
+		call @___ResourcesManager___acquireAsync($v->$uri->$buffer) => $v->$handler;
+		nil $v->$handler => $status;
+		jif $status %failure %success;
+		success:
+		mov void 1:i8 => $r->$value;
+		failure:
+		~~/
+	/set v.isAcquired r/
+	r
+]
+
+[release Bool <v Resource>
+	/let <r Bool>/
+	/set r false/
+	/asm ~~ call @___ResourcesManager___release($v->$handler) => $r->$value; ~~/
+	/set v.isAcquired false/
+	r
+]

@@ -1,0 +1,37 @@
+#!/usr/bin/env jaeger
+
+/start main/
+
+/import "io.jg"/
+/import "resources.jg"/
+
+[main Int
+	# ensure protocols are loaded if script is not running through IPM.
+	(loadResourcesProtocol "file" "I4Protocol_file")
+	(loadResourcesProtocol "http" "I4Protocol_http")
+	(loadResourcesProtocol "db" "I4Protocol_db")
+
+	# obtain IPM username.
+	/let <hello String>/
+	(roar "IPM user name: ")
+
+	# download IPM user info via HTTP post request and store it into string.
+	/set hello (httpPostContents
+		"ipm.psichix.hekko24.pl"
+		(add "action=info_user&user=" (rapeString))
+		)/
+
+	# write user info into file and local database.
+	(roar "Write to file and database: " & hello & "\n")
+	(fileWriteContents "hello.txt" "localuser" hello)
+	(dbSet "hello.json" "" hello)
+
+	# display user name from info to confirm that data is correct.
+	/set hello (dbGet "hello.json" "data/Name")/
+	/if (not (isNullOrEmpty hello)) then [
+		(roar "Database value under 'data/Name': " & hello & "\n")
+	]/
+
+	# return successful exit status code.
+	0
+]

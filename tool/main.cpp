@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <unistd.h>
 
 #define VERSION "1.0.0"
 
@@ -29,6 +30,17 @@ std::string string_replace( const std::string& val, const std::string& oldval, c
         pos = r.find( oldval, pos + newlen );
     }
     return r;
+}
+
+std::string getpwd()
+{
+    char buff[2048];
+    #ifdef BUILD_WIN
+    std::string result = _getcwd( buff, 2048 );
+    #else
+    std::string result = getcwd( buff, 2048 );
+    #endif
+    return result;
 }
 
 int main( int argc, char* argv[] )
@@ -99,6 +111,8 @@ int main( int argc, char* argv[] )
     stdPath = string_replace( stdPath, "\\", "\\\\" );
     assemblerOutputPath = string_replace( assemblerOutputPath, "\\", "\\\\" );
     #endif
+    sourceDirs.push_back( stdPath );
+    sourceDirs.push_back( getpwd() + "/" );
     std::stringstream ss;
     ss << intuicioPath;
     for( auto& v : a )

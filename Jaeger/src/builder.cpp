@@ -75,11 +75,15 @@ void Builder::popDirectory()
 
 std::string Builder::loadFile( const std::string& path )
 {
-    if( m_imports.count( path ) )
-        return m_imports[ path ];
-    std::string content = m_loadFileListener->onLoadInput( path );
-    m_imports[ path ] = content;
-    return content;
+    if( !m_dirs.empty() )
+    {
+        try
+        {
+            return m_loadFileListener->onLoadInput( m_dirs.top() + path );
+        }
+        catch( const std::exception& ex ) {}
+    }
+    return m_loadFileListener->onLoadInput( path );
 }
 
 std::string Builder::getPathDir( const std::string& path )
@@ -94,12 +98,11 @@ std::string Builder::getPathDir( const std::string& path )
 
 bool Builder::checkSyntax( const std::string& inputPath )
 {
-    m_imports.clear();
     pegtl::analyze< Grammar::grammar >();
     try
     {
         std::string input = loadFile( inputPath );
-        return pegtl::parse< Grammar::grammar, pegtl::nothing, Errors::control >( input, inputPath );
+        return input.empty() || pegtl::parse< Grammar::grammar, pegtl::nothing, Errors::control >( input, inputPath );
     }
     catch( const pegtl::parse_error& ex )
     {
@@ -115,21 +118,22 @@ bool Builder::checkSyntax( const std::string& inputPath )
 
 ProgramPtr Builder::buildProgram( const std::string& inputPath, bool isImport )
 {
-    m_imports.clear();
     pegtl::analyze< Grammar::grammar >();
-    ProgramPtr program( new Program() );
+    ProgramPtr program( new Program( inputPath ) );
     try
     {
-        std::string path = m_dirs.empty() ? inputPath : m_dirs.top() + inputPath;
-        std::string input = loadFile( path );
-        if( pegtl::parse< Grammar::grammar, CompilerActions::actions, Errors::control >( input, path, program ) )
+        std::string input = loadFile( inputPath );
+        if( input.empty() )
+            return program;
+        if( pegtl::parse< Grammar::grammar, CompilerActions::actions, Errors::control >( input, inputPath, program ) )
         {
             if( program )
             {
                 pushDirectory( getPathDir( inputPath ) );
                 program->loadImports( this );
                 popDirectory();
-                program->validate( this );
+                if( !isImport )
+                    program->validate( this );
                 if( m_printPST && !isImport )
                     program->write( std::cout );
                 return program;
@@ -153,9 +157,8 @@ ProgramPtr Builder::buildProgram( const std::string& inputPath, bool isImport )
 
 Program::FunctionPtr Builder::makeFunction( const std::string& content )
 {
-    m_imports.clear();
     pegtl::analyze< Grammar::grammar_function_definition >();
-    ProgramPtr program( new Program() );
+    ProgramPtr program( new Program( "" ) );
     try
     {
         if( pegtl::parse< Grammar::grammar, CompilerActions::actions, Errors::control >( content, "", program ) )

@@ -1,0 +1,244 @@
+/import "atom.jg"/
+/import "resources/Resource.jg"/
+/import "templates/Nullable.jg"/
+
+/jaegerify ~~
+	routine get_size(resource:*_Resource):i32
+	~~ from ProtocolFile/
+
+/jaegerify ~~
+	routine get_position(resource:*_Resource):i32
+	~~ from ProtocolFile/
+
+/jaegerify ~~
+	routine set_position(resource:*_Resource, position:i32):i8
+	~~ from ProtocolFile/
+
+/jaegerify ~~
+	routine read(resource:*_Resource, buffer:*i8, size:i32):i32
+	~~ from ProtocolFile/
+
+/jaegerify ~~
+	routine write(resource:*_Resource, buffer:*i8, size:i32):i32
+	~~ from ProtocolFile/
+
+{File
+	<path String>
+	<space String>
+	<mode String>
+	<resource Resource>
+}
+
+[File File <path String> <space String> <mode String>
+	/let <this File>/
+	/set this (File)/
+	/set this.path path/
+	/set this.space space/
+	/set this.mode mode/
+	/set this.resource (Resource (add "file@" (add space (add "?" (add mode (add "://" path))))))/
+	(acquire this.resource)
+	this
+]
+
+[<implement Nullable File>]
+
+[size Int <v File>
+	/let <r Int>/
+	/set r 0/
+	/asm ~~ call @___ProtocolFile___get_size($v->$resource->$handler) => $r->$value; ~~/
+	r
+]
+
+[position Int <v File>
+	/let <r Int>/
+	/set r 0/
+	/asm ~~ call @___ProtocolFile___get_position($v->$resource->$handler) => $r->$value; ~~/
+	r
+]
+
+[position <v File> <position Int>
+	/let ~~ status:i8 ~~/
+	/asm ~~ call @___ProtocolFile___set_position($v->$resource->$handler, $position->$value) => $status; ~~/
+]
+
+[readInt Int <v File>
+	/let
+		<r Int>
+		~~ p:*i32 ~~
+		~~ size:i32 ~~
+		/
+	/set r 0/
+	/asm ~~
+		ptr $r->$value => $p;
+		call @___ProtocolFile___read($v->$resource->$handler, $p, {i32}) => $size;
+		~~/
+	r
+]
+
+[readFloat Float <v File>
+	/let
+		<r Float>
+		~~ p:*f32 ~~
+		~~ size:i32 ~~
+		/
+	/set r 0.0/
+	/asm ~~
+		ptr $r->$value => $p;
+		call @___ProtocolFile___read($v->$resource->$handler, $p, {f32}) => $size;
+		~~/
+	r
+]
+
+[readString String <v File> <length Int>
+	/let
+		<r String>
+		~~ p:*i8 ~~
+		~~ size:i32 ~~
+		/
+	/set r (String)/
+	(String_Dispose r)
+	/asm ~~
+		add void $length->$value 1:i32 => $size;
+		new i8 $size => $p;
+		call @___ProtocolFile___read($v->$resource->$handler, $p, $length->$value) => $size;
+		mov void $p => $r->$buffer;
+		mov void $size => $r->$length;
+		add void $p $size => $p;
+		movb i8 1:i32 "":*i8 => $p;
+		~~/
+	r
+]
+
+[readBool Bool <v File>
+	/let
+		<r Bool>
+		~~ p:*i8 ~~
+		~~ size:i32 ~~
+		/
+	/set r false/
+	/asm ~~
+		ptr $r->$value => $p;
+		call @___ProtocolFile___read($v->$resource->$handler, $p, {i8}) => $size;
+		~~/
+	r
+]
+
+[readHandle Handle <v File>
+	/let
+		<r Handle>
+		~~ p:*i32 ~~
+		~~ size:i32 ~~
+		/
+	/set r (Handle)/
+	/asm ~~
+		ptr $r->$value => $p;
+		call @___ProtocolFile___read($v->$resource->$handler, $p, {i32}) => $size;
+		~~/
+	r
+]
+
+[readContents String <v File>
+	(readString v (size v))
+]
+
+[write Bool <v File> <value Int>
+	/let
+		<r Bool>
+		~~ p:*i32 ~~
+		~~ size:i32 ~~
+		/
+	/set r false/
+	/asm ~~
+		ptr $value->$value => $p;
+		call @___ProtocolFile___write($v->$resource->$handler, $p, {i32}) => $size;
+		jif $size %success %failure;
+		success:
+		mov void 1:i8 => $r->$value;
+		failure:
+		~~/
+	r
+]
+
+[write Bool <v File> <value Float>
+	/let
+		<r Bool>
+		~~ p:*f32 ~~
+		~~ size:f32 ~~
+		/
+	/set r false/
+	/asm ~~
+		ptr $value->$value => $p;
+		call @___ProtocolFile___write($v->$resource->$handler, $p, {f32}) => $size;
+		jif $size %success %failure;
+		success:
+		mov void 1:i8 => $r->$value;
+		failure:
+		~~/
+	r
+]
+
+[write Bool <v File> <value String>
+	/let
+		<r Bool>
+		~~ size:i32 ~~
+		/
+	/set r false/
+	/asm ~~
+		call @___ProtocolFile___write($v->$resource->$handler, $value->$buffer, $value->$length) => $size;
+		jif $size %success %failure;
+		success:
+		mov void 1:i8 => $r->$value;
+		failure:
+		~~/
+	r
+]
+
+[write Bool <v File> <value Bool>
+	/let
+		<r Bool>
+		~~ p:*i8 ~~
+		~~ size:i32 ~~
+		/
+	/set r false/
+	/asm ~~
+		ptr $value->$value => $p;
+		call @___ProtocolFile___write($v->$resource->$handler, $p, {i8}) => $size;
+		jif $size %success %failure;
+		success:
+		mov void 1:i8 => $r->$value;
+		failure:
+		~~/
+	r
+]
+
+[write Bool <v File> <value Handle>
+	/let
+		<r Bool>
+		~~ p:*i32 ~~
+		~~ size:i32 ~~
+		/
+	/set r false/
+	/asm ~~
+		ptr $value->$value => $p;
+		call @___ProtocolFile___write($v->$resource->$handler, $p, {i32}) => $size;
+		jif $size %success %failure;
+		success:
+		mov void 1:i8 => $r->$value;
+		failure:
+		~~/
+	r
+]
+
+[fileExists Bool <path String> <space String>
+	/let <file File>/
+	/set file (File path space "r")/
+	file.resource.isAcquired
+]
+
+[fileReadContents String <path String> <space String>
+	(readContents (File path space "r"))
+]
+
+[fileWriteContents Bool <path String> <space String> <contents String>
+	(write (File path space "w") contents)
+]

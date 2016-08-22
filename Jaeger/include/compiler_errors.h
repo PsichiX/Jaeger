@@ -34,7 +34,7 @@ namespace Errors
     template<> const std::string control< Grammar::whitespaces_any >::errorMessage = "expected optional whitespaces";
     template<> const std::string control< Grammar::whitespaces >::errorMessage = "expected whitespaces";
     template<> const std::string control< pegtl::internal::until< pegtl::internal::eolf > >::errorMessage = "expected to consume characters up to end of line feed";
-    template<> const std::string control< pegtl::sor< Grammar::directive_strict, Grammar::directive_import, Grammar::directive_start, Grammar::directive_jaegerify, Grammar::directive_marshal, Grammar::directive_asm_global > >::errorMessage = "expected one of directives: import, start, jaegerify, marshal, asm";
+    template<> const std::string control< pegtl::sor< Grammar::directive_strict, Grammar::directive_import, Grammar::directive_start, Grammar::directive_jaegerify, Grammar::directive_marshal, Grammar::directive_asm_global, Grammar::directive_attribute > >::errorMessage = "expected one of directives: import, start, jaegerify, marshal, asm, attribute";
     template<> const std::string control< pegtl::one< '/' > >::errorMessage = "expected `/` character";
     template<> const std::string control< pegtl::sor< Grammar::directive_let, Grammar::directive_asm, Grammar::directive_return, Grammar::directive_set, Grammar::directive_if, Grammar::directive_while, Grammar::directive_yield > >::errorMessage = "expected one of directives: let, asm, return, set, if, while, yield";
     template<> const std::string control< Grammar::String::escaped >::errorMessage = "expected escaped string character";

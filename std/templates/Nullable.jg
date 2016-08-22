@@ -1,0 +1,10 @@
+/import "atom/Bool.jg"/
+
+[<template Nullable
+	[isNull Bool <v ?{0}>
+		/let <r Bool>/
+		/set r false/
+		/asm ~~ nil $v => $r->$value; ~~/
+		r
+	]
+>]

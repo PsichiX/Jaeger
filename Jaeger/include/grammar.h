@@ -89,7 +89,8 @@ namespace Grammar
     struct directive_marshal_jaeger_assembly : pegtl::if_must< identifier_saved, whitespaces, pegtl::string< 't', 'o' >, whitespaces, string, whitespaces, pegtl::string< 'w', 'i', 't', 'h' >, whitespaces, code_injection > {};
     struct directive_marshal : pegtl::if_must< pegtl::seq< pegtl::string< 'm', 'a', 'r', 's', 'h', 'a', 'l' >, whitespaces >, pegtl::string< 'f', 'r', 'o', 'm' >, whitespaces, pegtl::sor< directive_marshal_assembly_jaeger, directive_marshal_jaeger_assembly > > {};
     struct directive_asm_global : directive_asm {};
-    struct directives_global : pegtl::if_must< pegtl::one< '/' >, whitespaces_any, pegtl::sor< directive_strict, directive_import, directive_start, directive_jaegerify, directive_marshal, directive_asm_global >, whitespaces_any, pegtl::one< '/' > > {};
+    struct directive_attribute : pegtl::if_must< pegtl::seq< pegtl::string< 'a', 't', 't', 'r', 'i', 'b', 'u', 't', 'e' >, whitespaces >, identifier_saved > {};
+    struct directives_global : pegtl::if_must< pegtl::one< '/' >, whitespaces_any, pegtl::sor< directive_strict, directive_import, directive_start, directive_jaegerify, directive_marshal, directive_asm_global, directive_attribute >, whitespaces_any, pegtl::one< '/' > > {};
     struct statement : pegtl::seq< pegtl::sor< templates, directives_global, structure, function_definition >, whitespaces_any > {};
     struct statements : pegtl::star< statement, whitespaces_any > {};
     struct grammar : pegtl::must< pegtl::opt< pegtl::sor< comment, pegtl::shebang >, whitespaces_any >, statements, whitespaces_any, pegtl::eof > {};

@@ -1,0 +1,157 @@
+/import "atom.jg"/
+/import "templates/Nullable.jg"/
+
+/jaegerify ~~
+	routine length(v:*i8):i32
+	~~ from String/
+
+/jaegerify ~~
+	routine i8_bool_to_string_new(v:i32):*i8
+	~~ from String/
+
+{Bool
+	~~ value:i8 ~~
+}
+
+[Bool Bool
+	/let <this Bool>/
+	/asm ~~
+		call @Bool_new() => $this;
+		mov void 0:i8 => $this->$value;
+		~~/
+	this
+]
+
+[clone Bool <v Bool>
+	/let <r Bool>/
+	/if (not (isNull v)) then [
+		/set r false/
+		/asm ~~ mov void $v->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[<implement Nullable Bool>]
+
+[toInt Int <v Bool>
+	/let <r Int>/
+	/if (not (isNull v)) then [
+		/set r 0/
+		/asm ~~ conv $v->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[toFloat Float <v Bool>
+	/let <r Float>/
+	/if (not (isNull v)) then [
+		/set r 0.0/
+		/asm ~~ conv $v->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[toString String <v Bool>
+	/let <r String>/
+	/if (not (isNull v)) then [
+		/set r (String)/
+		(String_Dispose r)
+		/asm ~~
+			call @___String___i8_bool_to_string_new($v->$value) => $r->$buffer;
+			call @___String___length($r->$buffer) => $r->$length;
+			~~/
+	]/
+	r
+]
+
+[toHandle Handle <v Bool>
+	/let <r Handle>/
+	/if (not (isNull v)) then [
+		/set r (Handle)/
+		/asm ~~ conv $v->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[equals Bool <a Bool> <b Bool>
+	/let <r Bool>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r false/
+		/asm ~~ eq void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[less Bool <a Bool> <b Bool>
+	/let <r Bool>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r false/
+		/asm ~~ ls void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[greater Bool <a Bool> <b Bool>
+	/let <r Bool>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r false/
+		/asm ~~ gr void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[not Bool <v Bool>
+	/let
+		<r Bool>
+		~~ status:i8 ~~
+		/
+	/set r false/
+	/asm ~~
+		nil $v => $status;
+		jif $status %failure %test;
+		test:
+		jif $v->$value %failure %success;
+		success:
+		mov void 1:i8 => $r->$value;
+		failure:
+		~~/
+	r
+]
+
+[and Bool <a Bool> <b Bool>
+	/let
+		<r Bool>
+		~~ status1:i8 ~~
+		~~ status2:i8 ~~
+		/
+	/set r false/
+	/asm ~~
+		nil $a => $status1;
+		nil $b => $status2;
+		or void $status1 $status2 => $status1;
+		jif $status1 %failure %success;
+		success:
+		and void $a->$value $b->$value => $r->$value;
+		failure:
+		~~/
+	r
+]
+
+[or Bool <a Bool> <b Bool>
+	/let
+		<r Bool>
+		~~ status1:i8 ~~
+		~~ status2:i8 ~~
+		/
+	/set r false/
+	/asm ~~
+		nil $a => $status1;
+		nil $b => $status2;
+		or void $status1 $status2 => $status1;
+		jif $status1 %failure %success;
+		success:
+		or void $a->$value $b->$value => $r->$value;
+		failure:
+		~~/
+	r
+]

@@ -1,0 +1,30 @@
+/import "atom.jg"/
+
+/jaegerify ~~
+	routine length(v:*i8):i32
+	~~ from String/
+
+/jaegerify ~~
+	routine current_time_epoch_ms():i32
+	~~	as [currentTimeEpochMS Int]
+		from System/
+
+/jaegerify ~~
+	routine current_time_steady_ms():i32
+	~~	as [currentTimeSteadyMS Int]
+		from System/
+
+/jaegerify ~~
+	routine platform():*i8
+	~~ from System/
+
+[platform String
+	/let <r String>/
+	/set r (String)/
+	(String_Dispose r)
+	/asm ~~
+		call @___System___platform() => $r->$buffer;
+		call @___String___length($r->$buffer) => $r->$length;
+		~~/
+	r
+]

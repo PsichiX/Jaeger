@@ -1,0 +1,137 @@
+/import "atom.jg"/
+/import "templates/Nullable.jg"/
+
+/jaegerify ~~
+	routine length(v:*i8):i32
+	~~ from String/
+
+/jaegerify ~~
+	routine i32_to_string_new(v:i32):*i8
+	~~ from String/
+
+{Handle
+	~~ value:i32 ~~
+}
+
+[Handle Handle
+	/let <this Handle>/
+	/asm ~~
+		call @Handle_new() => $this;
+		mov void 0:i32 => $this->$value;
+		~~/
+	this
+]
+
+[clone Handle <v Handle>
+	/let <r Handle>/
+	/if (not (isNull v)) then [
+		/set r (Handle)/
+		/asm ~~ mov void $v->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[<implement Nullable Handle>]
+
+[toInt Int <v Handle>
+	/let <r Int>/
+	/if (not (isNull v)) then [
+		/set r 0/
+		/asm ~~ mov void $v->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[toFloat Float <v Handle>
+	/let <r Float>/
+	/if (not (isNull v)) then [
+		/set r 0.0/
+		/asm ~~ conv $v->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[toString String <v Handle>
+	/let <r String>/
+	/if (not (isNull v)) then [
+		/set r (String)/
+		(String_Dispose r)
+		/asm ~~
+			call @___String___i32_to_string_new($v->$value) => $r->$buffer;
+			call @___String___length($r->$buffer) => $r->$length;
+			~~/
+	]/
+	r
+]
+
+[toBool Bool <v Handle>
+	/let <r Bool>/
+	/if (not (isNull v)) then [
+		/set r false/
+		/asm ~~ or void $v->$value 1:i8 => $r->$value; ~~/
+	]/
+	r
+]
+
+[add Handle <a Handle> <b Handle>
+	/let <r Handle>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r (Handle)/
+		/asm ~~ add void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[sub Handle <a Handle> <b Handle>
+	/let <r Handle>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r (Handle)/
+		/asm ~~ sub void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[mul Handle <a Handle> <b Handle>
+	/let <r Handle>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r (Handle)/
+		/asm ~~ mul void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[div Handle <a Handle> <b Handle>
+	/let <r Handle>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r (Handle)/
+		/asm ~~ div void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[equals Bool <a Handle> <b Handle>
+	/let <r Bool>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r false/
+		/asm ~~ eq void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[less Bool <a Handle> <b Handle>
+	/let <r Bool>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r false/
+		/asm ~~ ls void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[greater Bool <a Handle> <b Handle>
+	/let <r Bool>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r false/
+		/asm ~~ gr void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]

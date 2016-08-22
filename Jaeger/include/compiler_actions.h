@@ -388,6 +388,14 @@ namespace CompilerActions
         }
     };
 
+    template<> struct actions< Grammar::directive_attribute >
+    {
+        static void apply( const pegtl::input& in, ProgramPtr& program )
+        {
+            program->buildAttribute();
+        }
+    };
+
     template<> struct actions< Grammar::grammar_function_definition >
     {
         static void apply( const pegtl::input& in, ProgramPtr& program )

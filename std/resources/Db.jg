@@ -1,0 +1,96 @@
+/import "atom.jg"/
+/import "resources/Resource.jg"/
+/import "templates/Nullable.jg"/
+
+/jaegerify ~~
+	routine length(v:*i8):i32
+	~~ from String/
+
+/jaegerify ~~
+	routine get_cached_new(resource:*_Resource):*i8
+	~~ from ProtocolDb/
+
+{Db
+	<path String>
+	<method String>
+	<node String>
+	<value String>
+	<resource Resource>
+}
+
+[Db Db <path String> <method String> <node String> <value String>
+	/let <this Db>/
+	/set this (Db)/
+	/set this.path path/
+	/set this.method method/
+	/set this.node node/
+	/set this.value value/
+	/if (isNullOrEmpty value) then [
+		/set this.resource (Resource (add "db@" (add method (add "://" (add path (add "?" node))))))/
+	] else [
+		/set this.resource (Resource (add "db@" (add method (add "://" (add path (add "?" (add node (add "=" value))))))))/
+	]/
+	(acquire this.resource)
+	this
+]
+
+[<implement Nullable Db>]
+
+[getCached String <v Db>
+	/let <r String>/
+	/if (not (isNull v)) then [
+		/if (not (isNull v.resource)) then [
+			/set r (String)/
+			(String_Dispose r)
+			/asm ~~
+				call @___ProtocolDb___get_cached_new($v->$resource->$handler) => $r->$buffer;
+				call @___String___length($r->$buffer) => $r->$length;
+				~~/
+		]/
+	]/
+	r
+]
+
+[dbClose Bool <path String>
+	/let
+		<r Bool>
+		<db Db>
+		/
+	/if (not (isNull path)) then [
+		/set db (Db path "close" "" "")/
+		/set r db.resource.isAcquired/
+	]/
+	r
+]
+
+[dbSync Bool <path String>
+	/let
+		<r Bool>
+		<db Db>
+		/
+	/if (not (isNull path)) then [
+		/set db (Db path "sync" "" "")/
+		/set r db.resource.isAcquired/
+	]/
+	r
+]
+
+[dbGet String <path String> <node String>
+	/let <r String>/
+	/if (not (isNull path)) then [
+		/set r (getCached (Db path "get" node ""))/
+	]/
+	r
+]
+
+[dbSet Bool <path String> <node String> <value String>
+	/let
+		<r Bool>
+		<db Db>
+		/
+	/if (not (isNull path)) then [
+		/set db (Db path "set" node value)/
+		/set r db.resource.isAcquired/
+	]/
+	r
+]

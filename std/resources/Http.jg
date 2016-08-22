@@ -1,0 +1,81 @@
+/import "atom.jg"/
+/import "resources/Resource.jg"/
+/import "templates/Nullable.jg"/
+
+/jaegerify ~~
+	routine length(v:*i8):i32
+	~~ from String/
+
+/jaegerify ~~
+	routine get_status(resource:*_Resource):i32
+	~~ from ProtocolHttp/
+
+/jaegerify ~~
+	routine get_body_new(resource:*_Resource):*i8
+	~~ from ProtocolHttp/
+
+{Http
+	<url String>
+	<method String>
+	<params String>
+	<async Bool>
+	<resource Resource>
+}
+
+[Http Http <url String> <method String> <params String> <async Bool>
+	/let <this Http>/
+	/set this (Http)/
+	/set this.url url/
+	/set this.method method/
+	/set this.params params/
+	/set this.async async/
+	/set this.resource (Resource (add "http@" (add method (add "?" (add params (add "://" url))))))/
+	/if (not (isNull async)) then [
+		/if async then [
+			(acquireAsync this.resource)
+		] else [
+			(acquire this.resource)
+		]/
+	]/
+	this
+]
+
+[<implement Nullable Http>]
+
+[getStatus Int <v Http>
+	/let <r Int>/
+	/if (not (isNull v)) then [
+		/set r 0/
+		/asm ~~ call @___ProtocolHttp___get_status($v->$resource->$handler) => $r->$value; ~~/
+	]/
+	r
+]
+
+[getBody String <v Http>
+	/let <r String>/
+	/if (not (isNull v)) then [
+		/set r (String)/
+		(String_Dispose r)
+		/asm ~~
+			call @___ProtocolHttp___get_body_new($v->$resource->$handler) => $r->$buffer;
+			call @___String___length($r->$buffer) => $r->$length;
+			~~/
+	]/
+	r
+]
+
+[httpGetContents String <url String>
+	/let <r String>/
+	/if (not (isNull url)) then [
+		/set r (getBody (Http url "get" "" false))/
+	]/
+	r
+]
+
+[httpPostContents String <url String> <params String>
+	/let <r String>/
+	/if (not (isNull url)) then [
+		/set r (getBody (Http url "post" params false))/
+	]/
+	r
+]

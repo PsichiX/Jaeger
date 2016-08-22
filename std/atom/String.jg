@@ -1,0 +1,191 @@
+/import "atom.jg"/
+/import "templates/Nullable.jg"/
+
+/jaegerify ~~
+	routine format_new(format:*i8, ...):*i8
+	~~ from String/
+
+/jaegerify ~~
+	routine compare(a:*i8, b:*i8):i32
+	~~ from String/
+
+/jaegerify ~~
+	routine length(v:*i8):i32
+	~~ from String/
+
+/jaegerify ~~
+	routine substring_new(v:*i8, start:i32, length:i32):*i8
+	~~ from String/
+
+/jaegerify ~~
+	routine string_to_i8_bool(v:*i8):i8
+	~~ from String/
+
+/jaegerify ~~
+	routine string_to_i32(v:*i8):i32
+	~~ from String/
+
+/jaegerify ~~
+	routine string_to_f32(v:*i8):f32
+	~~ from String/
+
+{String
+	~~ buffer:*i8 ~~
+	~~ length:i32 ~~
+}
+
+[String String
+	/let <this String>/
+	/asm ~~
+		call @String_new() => $this;
+		mov void null => $this->$buffer;
+		mov void 0:i32 => $this->$length;
+		~~/
+	this
+]
+
+[String_Dispose <this String>
+	/let ~~ isnil:i8 ~~/
+	/asm ~~
+		nil $this->$buffer => $isnil;
+		jif $isnil %failure %success;
+		success:
+		del $this->$buffer;
+		failure:
+		~~/
+]
+
+[clone String <v String>
+	/let <r String>/
+	/if (not (isNull v)) then [
+		/set r (String)/
+		(String_Dispose r)
+		/asm ~~
+			call @___String___substring_new($v->$buffer, 0:i32, $v->$length) => $r->$buffer;
+			mov void $v->$length => $r->$length;
+			~~/
+	]/
+	r
+]
+
+[<implement Nullable String>]
+
+[isNullOrEmpty Bool <v String>
+	/let <r Bool>/
+	/set r false/
+	/asm ~~
+		nil $v => $r->$value;
+		jif $r->$value %exit %next;
+		next:
+		eq void 0:i32 $v->$length => $r->$value;
+		exit:
+		~~/
+	r
+]
+
+[toInt Int <v String>
+	/let <r Int>/
+	/if (not (isNull v)) then [
+		/set r 0/
+		/asm ~~ call @___String___string_to_i32($v->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[toFloat Float <v String>
+	/let <r Float>/
+	/if (not (isNull v)) then [
+		/set r 0.0/
+		/asm ~~ call @___String___string_to_f32($v->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[toBool Bool <v String>
+	/let <r Bool>/
+	/if (not (isNull v)) then [
+		/set r false/
+		/asm ~~ call @___String___string_to_i8_bool($v->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[toHandle Handle <v String>
+	/let <r Handle>/
+	/if (not (isNull v)) then [
+		/set r (Handle)/
+		/asm ~~ call @___String___string_to_i32($v->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[size Int <v String>
+	/let <r Int>/
+	/set r 0/
+	/if (not (isNull v)) then [
+		/asm ~~ mov void $v->$length => $r->$value; ~~/
+	]/
+	r
+]
+
+[add String <a String> <b String>
+	/let <r String>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r (String)/
+		(String_Dispose r)
+		/asm ~~
+			call @___String___format_new("${*}${*}":*i8, $a->$buffer, $b->$buffer) => $r->$buffer;
+			call @___String___length($r->$buffer) => $r->$length;
+			~~/
+	]/
+	r
+]
+
+[substring String <v String> <start Int> <length Int>
+	/let <r String>/
+	/if (and (not (isNull v)) (and (not (isNull start)) (not (isNull length)))) then [
+		/set r (String)/
+		(String_Dispose r)
+		/asm ~~
+			call @___String___substring_new($v->$buffer, $start->$value, $length->$value) => $r->$buffer;
+			call @___String___length($r->$buffer) => $r->$length;
+			~~/
+	]/
+	r
+]
+
+[equals Bool <a String> <b String>
+	/let <r Bool>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r false/
+		/asm ~~
+			call @___String___compare($a->$buffer, $b->$buffer) => $r->$value;
+			eq void $r->$value 0:i8 => $r->$value;
+			~~/
+	]/
+	r
+]
+
+[less Bool <a String> <b String>
+	/let <r Bool>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r false/
+		/asm ~~
+			call @___String___compare($a->$buffer, $b->$buffer) => $r->$value;
+			ls void $r->$value 0:i8 => $r->$value;
+			~~/
+	]/
+	r
+]
+
+[greater Bool <a String> <b String>
+	/let <r Bool>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r false/
+		/asm ~~
+			call @___String___compare($a->$buffer, $b->$buffer) => $r->$value;
+			gr void $r->$value 0:i8 => $r->$value;
+			~~/
+	]/
+	r
+]

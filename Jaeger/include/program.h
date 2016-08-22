@@ -9,6 +9,7 @@
 #include <map>
 #include <queue>
 #include <ostream>
+#include <exception>
 
 //#define DEBUG_PRINT
 
@@ -19,6 +20,18 @@ class Program
 public:
     class Function;
     struct ConditionData;
+
+    class Exception : public std::runtime_error
+    {
+    public:
+        Exception( Program* program, const std::string& message );
+    };
+
+    class LinkException : public std::runtime_error
+    {
+    public:
+        LinkException( Program* linkedProgram, Program* program, const std::string& message );
+    };
 
     class Validated
     {
@@ -59,6 +72,7 @@ public:
 
         std::string id;
         std::vector< FieldPtr > fields;
+        std::vector< std::string > attributes;
     };
 
     typedef std::shared_ptr< Structure > StructurePtr;
@@ -327,6 +341,7 @@ public:
         StructurePtr constructor;
         StructurePtr disposal;
         std::string jaegerifiedId;
+        std::vector< std::string > attributes;
 
     private:
         std::string m_uid;
@@ -357,9 +372,18 @@ public:
         std::vector< ExpressionPtr > expressions;
     };
 
-    Program();
+    struct ImplementationData
+    {
+        std::string id;
+        std::vector< std::string > types;
+
+        ImplementationData( const std::string& i, const std::vector< std::string >& t ) : id( i ), types( t ) {}
+    };
+
+    Program( const std::string& inputPath );
     ~Program();
 
+    const std::string& getInputPath() { return m_inputPath; }
     std::size_t getStackSize() { return m_stack.size(); }
     std::string getLastFunction() { return m_lastFunctionDefinition; }
     void clearLastFunctionDefinition() { m_lastFunctionDefinition.clear(); }
@@ -422,6 +446,7 @@ public:
     void buildYield();
     void buildTemplateDefinition();
     void buildTemplateImplementation();
+    void buildAttribute();
 
     std::string startFunction;
     std::vector< std::string > imports;
@@ -432,13 +457,16 @@ public:
     std::map< std::string, StructurePtr > structures;
     std::map< std::string, FunctionPtr > functions;
     std::map< std::string, std::string > templates;
+    std::vector< ImplementationData > implementations;
 
 private:
+    std::string m_inputPath;
     bool m_strict;
     std::stack< std::string > m_stack;
     std::stack< std::size_t > m_stackPositions;
     std::vector< FieldPtr > m_builtFields;
     std::vector< ExpressionPtr > m_builtExpressions;
+    std::vector< std::string > m_builtAttributes;
     std::stack< std::queue< std::vector< ExpressionPtr > > > m_sections;
     std::stack< std::size_t > m_expressionsPositions;
     std::vector< FieldPtr > m_builtArgs;
