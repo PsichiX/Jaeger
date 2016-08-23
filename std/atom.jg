@@ -1,5 +1,5 @@
-/import "atom/Int.jg"/
-/import "atom/Float.jg"/
-/import "atom/String.jg"/
-/import "atom/Bool.jg"/
-/import "atom/Handle.jg"/
+/import "/atom/Int.jg"/
+/import "/atom/Float.jg"/
+/import "/atom/String.jg"/
+/import "/atom/Bool.jg"/
+/import "/atom/Handle.jg"/

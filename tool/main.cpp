@@ -53,6 +53,13 @@ int main( int argc, char* argv[] )
     bool profile = false;
     std::string assemblerOutputPath;
     std::vector< std::string > a;
+    auto cstdPath = getenv( "JAEGER_STD" );
+    std::string stdPath = cstdPath ? cstdPath : "";
+    if( stdPath.empty() )
+    {
+        std::cout << "There is no registered JAEGER_STD environment variable that specify Jaeger standard libraries path!" << std::endl;
+        return 1;
+    }
     for( int i = 1; i < argc; ++i )
     {
         arg = argv[i];
@@ -97,13 +104,6 @@ int main( int argc, char* argv[] )
             assemblerOutputPath = arg;
             argMode = AM_NONE;
         }
-    }
-    auto cstdPath = getenv( "JAEGER_STD" );
-    std::string stdPath = cstdPath ? cstdPath : "";
-    if( stdPath.empty() )
-    {
-        std::cout << "There is no registered JAEGER_STD environment variable that specify Jaeger standard libraries path!" << std::endl;
-        return 1;
     }
     #ifdef BUILD_WIN
     intuicioPath = string_replace( intuicioPath, "\\", "\\\\" );

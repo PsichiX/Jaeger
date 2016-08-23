@@ -75,7 +75,7 @@ void Builder::popDirectory()
 
 std::string Builder::loadFile( const std::string& path )
 {
-    if( !m_dirs.empty() )
+    if( !m_dirs.empty() && !path.empty() && path[0] != '/' && path[0] != '\\' )
     {
         try
         {

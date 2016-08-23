@@ -1,8 +1,4 @@
-/import "atom.jg"/
-
-/jaegerify ~~
-	routine length(v:*i8):i32
-	~~ from String/
+/import "/atom.jg"/
 
 /jaegerify ~~
 	routine current_time_epoch_ms():i32
@@ -16,15 +12,10 @@
 
 /jaegerify ~~
 	routine platform():*i8
-	~~ from System/
+	~~	as [platform String]
+		from System/
 
-[platform String
-	/let <r String>/
-	/set r (String)/
-	(String_Dispose r)
-	/asm ~~
-		call @___System___platform() => $r->$buffer;
-		call @___String___length($r->$buffer) => $r->$length;
-		~~/
-	r
-]
+/jaegerify ~~
+	routine get_env(id:*i8):*i8
+	~~	as [getEnv String <id String>]
+		from System/

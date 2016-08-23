@@ -1,13 +1,24 @@
-/import "atom.jg"/
-/import "templates/Nullable.jg"/
+/import "/atom.jg"/
+/import "/templates/Nullable.jg"/
 
 /jaegerify ~~
 	routine format_new(format:*i8, ...):*i8
 	~~ from String/
 
 /jaegerify ~~
-	routine compare(a:*i8, b:*i8):i32
-	~~ from String/
+	routine equals(a:*i8, b:*i8):i8
+	~~	as [equals Bool <a String> <b String>]
+		from String/
+
+/jaegerify ~~
+	routine less(a:*i8, b:*i8):i8
+	~~	as [less Bool <a String> <b String>]
+		from String/
+
+/jaegerify ~~
+	routine greater(a:*i8, b:*i8):i8
+	~~	as [greater Bool <a String> <b String>]
+		from String/
 
 /jaegerify ~~
 	routine length(v:*i8):i32
@@ -149,42 +160,6 @@
 		/asm ~~
 			call @___String___substring_new($v->$buffer, $start->$value, $length->$value) => $r->$buffer;
 			call @___String___length($r->$buffer) => $r->$length;
-			~~/
-	]/
-	r
-]
-
-[equals Bool <a String> <b String>
-	/let <r Bool>/
-	/if (and (not (isNull a)) (not (isNull b))) then [
-		/set r false/
-		/asm ~~
-			call @___String___compare($a->$buffer, $b->$buffer) => $r->$value;
-			eq void $r->$value 0:i8 => $r->$value;
-			~~/
-	]/
-	r
-]
-
-[less Bool <a String> <b String>
-	/let <r Bool>/
-	/if (and (not (isNull a)) (not (isNull b))) then [
-		/set r false/
-		/asm ~~
-			call @___String___compare($a->$buffer, $b->$buffer) => $r->$value;
-			ls void $r->$value 0:i8 => $r->$value;
-			~~/
-	]/
-	r
-]
-
-[greater Bool <a String> <b String>
-	/let <r Bool>/
-	/if (and (not (isNull a)) (not (isNull b))) then [
-		/set r false/
-		/asm ~~
-			call @___String___compare($a->$buffer, $b->$buffer) => $r->$value;
-			gr void $r->$value 0:i8 => $r->$value;
 			~~/
 	]/
 	r

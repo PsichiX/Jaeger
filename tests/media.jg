@@ -1,0 +1,32 @@
+#!/usr/bin/env jaeger
+
+/start main/
+
+/import "/io.jg"/
+# import media helper to support window and scene rendering.
+/import "/media.jg"/
+
+[main Int
+	# declare variable to store current event type.
+	/let <type String>/
+	# try to open window.
+	/if (windowOpen 512 256 false (rapeString) true) then [
+		(roarLine "Window opened!")
+		# process events and render scene while window is open.
+		/while (windowIsOpen) then [
+			# process pending events.
+			/while (windowPollEvent) then [
+				/set type (windowGetEventTypeId)/
+				# close window when 'close' button is pressed.
+				/if (equals type "closed") then [
+					(windowClose)
+				]/
+			]/
+			# render scene onto screen.
+			(windowDisplay)
+		]/
+		(roarLine "Window closed!")
+	]/
+	# return success exit code.
+	0
+]

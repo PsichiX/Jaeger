@@ -1,6 +1,6 @@
-/import "atom.jg"/
-/import "resources/Resource.jg"/
-/import "templates/Nullable.jg"/
+/import "/atom.jg"/
+/import "/resources/Resource.jg"/
+/import "/templates/Nullable.jg"/
 
 /jaegerify ~~
 	routine length(v:*i8):i32

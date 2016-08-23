@@ -833,15 +833,15 @@ void Program::Function::assemble( std::ostream& output, Program* program )
         {
             output << ", ";
             a->assemble( output );
-            output << ", " << program->marshallField( a, nm->args[j]->type->makeUID() );
+            output << ", " << program->marshallField( a, nm->args[j++]->type->makeUID() );
         }
         output << ">" << std::endl;
         output << "{" << std::endl;
-        j = 0;
+        j = nm->args.size();
         for( std::vector< FieldPtr >::reverse_iterator it = args.rbegin(); it != args.rend(); ++it )
         {
             output << "cpop $stack void => $" << (*it)->id << ";" << std::endl;
-            program->marshallValue( output, *it, nm->args[j]->type->makeUID() );
+            program->marshallValue( output, *it, nm->args[--j]->type->makeUID() );
         }
         output << "call @___" << data.module << "___" << data.method << "(";
         i = args.size();

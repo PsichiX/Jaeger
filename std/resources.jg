@@ -1,4 +1,4 @@
-/import "resources/Resource.jg"/
-/import "resources/File.jg"/
-/import "resources/Http.jg"/
-/import "resources/Db.jg"/
+/import "/resources/Resource.jg"/
+/import "/resources/File.jg"/
+/import "/resources/Http.jg"/
+/import "/resources/Db.jg"/

@@ -1,4 +1,4 @@
-/import "atom.jg"/
+/import "/atom.jg"/
 
 /jaegerify ~~
 	routine print(format:*i8, ...):

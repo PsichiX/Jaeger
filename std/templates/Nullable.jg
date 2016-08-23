@@ -1,4 +1,4 @@
-/import "atom/Bool.jg"/
+/import "/atom/Bool.jg"/
 
 [<template Nullable
 	[isNull Bool <v ?{0}>

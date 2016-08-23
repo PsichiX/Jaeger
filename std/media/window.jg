@@ -1,0 +1,55 @@
+/import "/atom.jg"/
+
+/jaegerify ~~
+	routine window_open(width:i32, height:i32, fullscreen:i8, title:*i8, vsync:i8):i8
+	~~	as [windowOpen Bool <width Int> <height Int> <fullscreen Bool> <title String> <vsync Bool>]
+		from Media/
+
+/jaegerify ~~
+	routine window_close():i8
+	~~	as [windowClose Bool]
+		from Media/
+
+/jaegerify ~~
+	routine window_is_open():i8
+	~~	as [windowIsOpen Bool]
+		from Media/
+
+/jaegerify ~~
+	routine window_poll_event():i8
+	~~	as [windowPollEvent Bool]
+		from Media/
+
+/jaegerify ~~
+	routine window_display():i8
+	~~	as [windowDisplay Bool]
+		from Media/
+
+/jaegerify ~~
+	routine window_has_focus():i8
+	~~	as [windowHasFocus Bool]
+		from Media/
+
+/jaegerify ~~
+	routine window_request_focus():i8
+	~~	as [windowRequestFocus Bool]
+		from Media/
+
+/jaegerify ~~
+	routine window_get_event_type():i32
+	~~	as [windowGetEventType Int]
+		from Media/
+
+[windowGetEventTypeId String
+	/let
+		<r String>
+		<type Int>
+		/
+	/set type (windowGetEventType)/
+	/if (equals type 0) then [
+		/set r "closed"/
+	] else [
+		/set r "undefined"/
+	]/
+	r
+]

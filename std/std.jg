@@ -1,5 +1,6 @@
-/import "atom.jg"/
-/import "io.jg"/
-/import "system.jg"/
-/import "resources.jg"/
-/import "templates.jg"/
+/import "/atom.jg"/
+/import "/io.jg"/
+/import "/system.jg"/
+/import "/resources.jg"/
+/import "/media.jg"/
+/import "/templates.jg"/
