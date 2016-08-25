@@ -68,10 +68,12 @@
 		~~ size:i32 ~~
 		/
 	/set r 0/
-	/asm ~~
-		ptr $r->$value => $p;
-		call @___ProtocolFile___read($v->$resource->$handler, $p, {i32}) => $size;
-		~~/
+	/if (not (isNull v)) then [
+		/asm ~~
+			ptr $r->$value => $p;
+			call @___ProtocolFile___read($v->$resource->$handler, $p, {i32}) => $size;
+			~~/
+	]/
 	r
 ]
 
@@ -82,10 +84,12 @@
 		~~ size:i32 ~~
 		/
 	/set r 0.0/
-	/asm ~~
-		ptr $r->$value => $p;
-		call @___ProtocolFile___read($v->$resource->$handler, $p, {f32}) => $size;
-		~~/
+	/if (not (isNull v)) then [
+		/asm ~~
+			ptr $r->$value => $p;
+			call @___ProtocolFile___read($v->$resource->$handler, $p, {f32}) => $size;
+			~~/
+	]/
 	r
 ]
 
@@ -96,16 +100,18 @@
 		~~ size:i32 ~~
 		/
 	/set r (String)/
-	(String_Dispose r)
-	/asm ~~
-		add void $length->$value 1:i32 => $size;
-		new i8 $size => $p;
-		call @___ProtocolFile___read($v->$resource->$handler, $p, $length->$value) => $size;
-		mov void $p => $r->$buffer;
-		mov void $size => $r->$length;
-		add void $p $size => $p;
-		movb i8 1:i32 "":*i8 => $p;
-		~~/
+	/if (and (not (isNull v)) (not (isNull length))) then [
+		(String_Dispose r)
+		/asm ~~
+			add void $length->$value 1:i32 => $size;
+			new i8 $size => $p;
+			call @___ProtocolFile___read($v->$resource->$handler, $p, $length->$value) => $size;
+			mov void $p => $r->$buffer;
+			mov void $size => $r->$length;
+			add void $p $size => $p;
+			movb i8 1:i32 "":*i8 => $p;
+			~~/
+	]/
 	r
 ]
 
@@ -116,10 +122,12 @@
 		~~ size:i32 ~~
 		/
 	/set r false/
-	/asm ~~
-		ptr $r->$value => $p;
-		call @___ProtocolFile___read($v->$resource->$handler, $p, {i8}) => $size;
-		~~/
+	/if (not (isNull v)) then [
+		/asm ~~
+			ptr $r->$value => $p;
+			call @___ProtocolFile___read($v->$resource->$handler, $p, {i8}) => $size;
+			~~/
+	]/
 	r
 ]
 
@@ -130,15 +138,33 @@
 		~~ size:i32 ~~
 		/
 	/set r (Handle)/
-	/asm ~~
-		ptr $r->$value => $p;
-		call @___ProtocolFile___read($v->$resource->$handler, $p, {i32}) => $size;
-		~~/
+	/if (not (isNull v)) then [
+		/asm ~~
+			ptr $r->$value => $p;
+			call @___ProtocolFile___read($v->$resource->$handler, $p, {i32}) => $size;
+			~~/
+	]/
+	r
+]
+
+[readBuffer Buffer <v File> <size Int>
+	/let <r Buffer>/
+	/if (and (not (isNull v)) (greater size 0)) then [
+		/set r (Buffer)/
+		/asm ~~
+			new i8 $size->$value => $r->$data;
+			call @___ProtocolFile___read($v->$resource->$handler, $r->$data, $size->$value) => $r->$size;
+			~~/
+	]/
 	r
 ]
 
 [readContents String <v File>
 	(readString v (size v))
+]
+
+[readContentsBuffer Buffer <v File>
+	(readBuffer v (size v))
 ]
 
 [write Bool <v File> <value Int>
@@ -148,14 +174,16 @@
 		~~ size:i32 ~~
 		/
 	/set r false/
-	/asm ~~
-		ptr $value->$value => $p;
-		call @___ProtocolFile___write($v->$resource->$handler, $p, {i32}) => $size;
-		jif $size %success %failure;
-		success:
-		mov void 1:i8 => $r->$value;
-		failure:
-		~~/
+	/if (and (not (isNull v)) (not (isNull value))) then [
+		/asm ~~
+			ptr $value->$value => $p;
+			call @___ProtocolFile___write($v->$resource->$handler, $p, {i32}) => $size;
+			jif $size %success %failure;
+			success:
+			mov void 1:i8 => $r->$value;
+			failure:
+			~~/
+	]/
 	r
 ]
 
@@ -166,14 +194,16 @@
 		~~ size:f32 ~~
 		/
 	/set r false/
-	/asm ~~
-		ptr $value->$value => $p;
-		call @___ProtocolFile___write($v->$resource->$handler, $p, {f32}) => $size;
-		jif $size %success %failure;
-		success:
-		mov void 1:i8 => $r->$value;
-		failure:
-		~~/
+	/if (and (not (isNull v)) (not (isNull value))) then [
+		/asm ~~
+			ptr $value->$value => $p;
+			call @___ProtocolFile___write($v->$resource->$handler, $p, {f32}) => $size;
+			jif $size %success %failure;
+			success:
+			mov void 1:i8 => $r->$value;
+			failure:
+			~~/
+	]/
 	r
 ]
 
@@ -183,13 +213,15 @@
 		~~ size:i32 ~~
 		/
 	/set r false/
-	/asm ~~
-		call @___ProtocolFile___write($v->$resource->$handler, $value->$buffer, $value->$length) => $size;
-		jif $size %success %failure;
-		success:
-		mov void 1:i8 => $r->$value;
-		failure:
-		~~/
+	/if (and (not (isNull v)) (not (isNull value))) then [
+		/asm ~~
+			call @___ProtocolFile___write($v->$resource->$handler, $value->$buffer, $value->$length) => $size;
+			jif $size %success %failure;
+			success:
+			mov void 1:i8 => $r->$value;
+			failure:
+			~~/
+	]/
 	r
 ]
 
@@ -200,14 +232,16 @@
 		~~ size:i32 ~~
 		/
 	/set r false/
-	/asm ~~
-		ptr $value->$value => $p;
-		call @___ProtocolFile___write($v->$resource->$handler, $p, {i8}) => $size;
-		jif $size %success %failure;
-		success:
-		mov void 1:i8 => $r->$value;
-		failure:
-		~~/
+	/if (and (not (isNull v)) (not (isNull value))) then [
+		/asm ~~
+			ptr $value->$value => $p;
+			call @___ProtocolFile___write($v->$resource->$handler, $p, {i8}) => $size;
+			jif $size %success %failure;
+			success:
+			mov void 1:i8 => $r->$value;
+			failure:
+			~~/
+	]/
 	r
 ]
 
@@ -218,27 +252,63 @@
 		~~ size:i32 ~~
 		/
 	/set r false/
-	/asm ~~
-		ptr $value->$value => $p;
-		call @___ProtocolFile___write($v->$resource->$handler, $p, {i32}) => $size;
-		jif $size %success %failure;
-		success:
-		mov void 1:i8 => $r->$value;
-		failure:
-		~~/
+	/if (and (not (isNull v)) (not (isNull value))) then [
+		/asm ~~
+			ptr $value->$value => $p;
+			call @___ProtocolFile___write($v->$resource->$handler, $p, {i32}) => $size;
+			jif $size %success %failure;
+			success:
+			mov void 1:i8 => $r->$value;
+			failure:
+			~~/
+	]/
+	r
+]
+
+[write Bool <v File> <value Buffer>
+	/let
+		<r Bool>
+		~~ size:i32 ~~
+		/
+	/set r false/
+	/if (and (not (isNull v)) (not (isNull value))) then [
+		/asm ~~
+			call @___ProtocolFile___write($v->$resource->$handler, $value->$data, $value->$size) => $size;
+			jif $size %success %failure;
+			success:
+			mov void 1:i8 => $r->$value;
+			failure:
+			~~/
+	]/
 	r
 ]
 
 [fileExists Bool <path String> <space String>
-	/let <file File>/
+	/let
+		<file File>
+		<r Bool>
+		/
 	/set file (File path space "r")/
-	file.resource.isAcquired
+	/if (not (isNull file)) then [
+		/set r file.resource.isAcquired/
+	] else [
+		/set r false/
+	]/
+	r
 ]
 
 [fileReadContents String <path String> <space String>
 	(readContents (File path space "r"))
 ]
 
+[fileReadContentsBuffer Buffer <path String> <space String>
+	(readContentsBuffer (File path space "r"))
+]
+
 [fileWriteContents Bool <path String> <space String> <contents String>
+	(write (File path space "w") contents)
+]
+
+[fileWriteContentsBuffer Bool <path String> <space String> <contents Buffer>
 	(write (File path space "w") contents)
 ]

@@ -1,0 +1,64 @@
+/import "/atom.jg"/
+/import "/templates/Nullable.jg"/
+
+{Rect
+	<left Int>
+	<top Int>
+	<width Int>
+	<height Int>
+}
+
+[Rect Rect
+	/let <this Rect>/
+	/asm ~~ call @Rect_new() => $this; ~~/
+	/set this.left 0/
+	/set this.top 0/
+	/set this.width 0/
+	/set this.height 0/
+	this
+]
+
+[Rect Rect <left Int> <top Int> <width Int> <height Int>
+	/let <this Rect>/
+	/set this (Rect)/
+	/set this.left left/
+	/set this.top top/
+	/set this.width width/
+	/set this.height height/
+	this
+]
+
+[clone Rect <v Rect>
+	/let <r Rect>/
+	/if (not (isNull v)) then [
+		/set r (Rect v.left v.top v.width v.height)/
+	]/
+	r
+]
+
+[<implement Nullable Rect>]
+
+[isNullOrEmpty Bool <v Rect>
+	/let <r Bool>/
+	/set r false/
+	/if (isNull v) then [
+		/set r true/
+	] elif (isNull v.left) then [
+		/set r true/
+	] elif (isNull v.top) then [
+		/set r true/
+	] elif (isNull v.width) then [
+		/set r true/
+	] elif (isNull v.height) then [
+		/set r true/
+	]/
+	r
+]
+
+[toString String <v Rect>
+	/let <r String>/
+	/if (not (isNull v)) then [
+		/set r (add "[" (add (toString v.left) (add ";" (add (toString v.top) (add ";" (add (toString v.width) (add ";" (add (toString v.height) "]"))))))))/
+	]/
+	r
+]

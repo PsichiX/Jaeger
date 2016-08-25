@@ -110,9 +110,10 @@ namespace CompilerActions
         static void apply( const pegtl::input& in, ProgramPtr& program )
         {
             std::stringstream ss( in.string().substr( 2 ) );
-            I4::i32 v = 0;
+            I4::i64 v = 0;
             ss >> std::hex >> v;
-            program->buildConstantInteger( v );
+            I4::i32* t = (I4::i32*)&v;
+            program->buildConstantInteger( *t );
         }
     };
 

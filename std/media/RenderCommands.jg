@@ -1,0 +1,327 @@
+/import "/atom.jg"/
+/import "/templates/Nullable.jg"/
+/import "/media/Vec2.jg"/
+/import "/media/Color.jg"/
+
+/jaegerify ~~
+	routine graphics_batch_create():*_RenderCommands
+	~~ from Media/
+
+/jaegerify ~~
+	routine graphics_batch_destroy(batch:*_RenderCommands):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine graphics_batch_begin(batch:*_RenderCommands):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine graphics_batch_end(batch:*_RenderCommands):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine graphics_batch_view_begin(batch:*_RenderCommands, w:f32, h:f32, px:f32, py:f32, r:f32, vl:f32, vt:f32, vw:f32, vh:f32, z:f32):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine graphics_batch_view_end(batch:*_RenderCommands):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine graphics_batch_sprite(batch:*_RenderCommands, material:*i8, w:f32, h:f32, px:f32, py:f32, r:f32, sx:f32, sy:f32, ox:f32, oy:f32, cr:u8, cg:u8, cb:u8, ca:u8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine graphics_batch_text(batch:*_RenderCommands):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine graphics_batch_child_begin(batch:*_RenderCommands, px:f32, py:f32, r:f32, sx:f32, sy:f32):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine graphics_batch_child_end(batch:*_RenderCommands):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine texture_acquire(id:*i8, data:*i8, size:i32, smooth:i8, repeated:i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine texture_release(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine texture_exists(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine material_acquire(id:*i8, vertexShader:*i8, fragmentShader:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine material_release(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine material_exists(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine material_set_uniform(id:*i8, param:*i8, channels:i32, ...):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine material_set_sampler(id:*i8, param:*i8, texture:*i8):i8
+	~~ from Media/
+
+/asm ~~
+	struct _RenderCommands
+	{
+		data:i64;
+	};
+	~~/
+
+{RenderCommands
+	~~ handler:*_RenderCommands ~~
+}
+
+[RenderCommands RenderCommands
+	/let <this RenderCommands>/
+	/asm ~~
+		call @RenderCommands_new() => $this;
+		call @___Media___graphics_batch_create() => $this->$handler;
+		~~/
+	this
+]
+
+[RenderCommands_Dispose <this RenderCommands>
+	/let ~~ status:i8 ~~/
+	/asm ~~
+		call @___Media___graphics_batch_destroy($this->$handler) => $status;
+		mov void null => $this->$handler;
+		~~/
+]
+
+[<implement Nullable RenderCommands>]
+
+[begin Bool <v RenderCommands>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNull v)) then [
+		/asm ~~ call @___Media___graphics_batch_begin($v->$handler) => $r->$value; ~~/
+	]/
+	r
+]
+
+[end Bool <v RenderCommands>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNull v)) then [
+		/asm ~~ call @___Media___graphics_batch_end($v->$handler) => $r->$value; ~~/
+	]/
+	r
+]
+
+[viewBegin Bool <v RenderCommands> <size Vec2> <position Vec2> <rotation Float> <vportTL Vec2> <vportWH Vec2> <zoom Float>
+	/let <r Bool>/
+	/set r false/
+	/if (and (not (isNull v))
+		(and (not (isNullOrEmpty size))
+			(and (not (isNullOrEmpty position))
+				(and (not (isNull rotation))
+					(and (not (isNullOrEmpty vportTL))
+						(and (not (isNullOrEmpty vportWH)) (not (isNull zoom)))
+					)
+				)
+			)
+		)
+	) then [
+		/asm ~~
+			call @___Media___graphics_batch_view_begin(
+				$v->$handler,
+				$size->$x->$value,
+				$size->$y->$value,
+				$position->$x->$value,
+				$position->$y->$value,
+				$rotation->$value,
+				$vportTL->$x->$value,
+				$vportTL->$y->$value,
+				$vportWH->$x->$value,
+				$vportWH->$y->$value,
+				$zoom->$value
+			) => $r->$value;
+			~~/
+	]/
+	r
+]
+
+[viewEnd Bool <v RenderCommands>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNull v)) then [
+		/asm ~~ call @___Media___graphics_batch_view_end($v->$handler) => $r->$value; ~~/
+	]/
+	r
+]
+
+[sprite Bool <v RenderCommands> <material String> <size Vec2> <position Vec2> <rotation Float> <scale Vec2> <origin Vec2> <color Color>
+	/let <r Bool>/
+	/set r false/
+	/if (and (not (isNull v))
+		(and (not (isNull material))
+			(and (not (isNullOrEmpty size))
+				(and (not (isNullOrEmpty position))
+					(and (not (isNull rotation))
+						(and (not (isNullOrEmpty scale))
+							(and (not (isNullOrEmpty origin)) (not (isNull color)))
+						)
+					)
+				)
+			)
+		)
+	) then [
+		/asm ~~
+			call @___Media___graphics_batch_sprite(
+				$v->$handler,
+				$material->$buffer,
+				$size->$x->$value,
+				$size->$y->$value,
+				$position->$x->$value,
+				$position->$y->$value,
+				$rotation->$value,
+				$scale->$x->$value,
+				$scale->$y->$value,
+				$origin->$x->$value,
+				$origin->$y->$value,
+				$color->$red,
+				$color->$green,
+				$color->$blue,
+				$color->$alpha
+			) => $r->$value;
+			~~/
+	]/
+	r
+]
+
+[text Bool <v RenderCommands>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNull v)) then [
+		/asm ~~ call @___Media___graphics_batch_text($v->$handler) => $r->$value; ~~/
+	]/
+	r
+]
+
+[childBegin Bool <v RenderCommands> <position Vec2> <rotation Float> <scale Vec2>
+	/let <r Bool>/
+	/set r false/
+	/if (and (not (isNull v))
+		(and (not (isNullOrEmpty position))
+			(and (not (isNull rotation)) (not (isNullOrEmpty scale)))
+		)
+	) then [
+		/asm ~~
+			call @___Media___graphics_batch_child_begin(
+				$v->$handler,
+				$position->$x->$value,
+				$position->$y->$value,
+				$rotation->$value,
+				$scale->$x->$value,
+				$scale->$y->$value
+			) => $r->$value;
+			~~/
+	]/
+	r
+]
+
+[childEnd Bool <v RenderCommands>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNull v)) then [
+		/asm ~~ call @___Media___graphics_batch_child_end($v->$handler) => $r->$value; ~~/
+	]/
+	r
+]
+
+[textureAcquire Bool <id String> <buffer Buffer> <smooth Bool> <repeated Bool>
+	/let <r Bool>/
+	/set r false/
+	/if (and (not (isNullOrEmpty id))
+		(and (not (isNull buffer))
+			(and (not (isNull smooth)) (not (isNull repeated)))
+		)
+	) then [
+		/asm ~~ call @___Media___texture_acquire($id->$buffer, $buffer->$data, $buffer->$size, $smooth->$value, $repeated->$value) => $r->$value; ~~/
+	]/
+	r
+]
+
+[textureRelease Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___texture_release($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[textureExists Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___texture_exists($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[materialAcquire Bool <id String> <vertexShader String> <fragmentShader String>
+	/let <r Bool>/
+	/set r false/
+	/if (and (not (isNullOrEmpty id))
+		(and (not (isNullOrEmpty vertexShader)) (not (isNullOrEmpty fragmentShader)))
+	) then [
+		/asm ~~ call @___Media___material_acquire($id->$buffer, $vertexShader->$buffer, $fragmentShader->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[materialRelease Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___material_release($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[materialExists Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___material_exists($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+###[materialSetUniform1 Bool <id String> <param String> <v0 Float>
+	/let <r Bool>/
+	/set r false/
+	/if (and (not (isNullOrEmpty id))
+		(and (not (isNullOrEmpty param)) (not (isNullOrEmpty v0)))
+	) then [
+		/asm ~~ call @___Media___material_set_uniform($id->$buffer, $param->$buffer, 1, $v0->$value) => $r->$value; ~~/
+	]/
+	r
+]###
+
+[materialSetSampler Bool <id String> <param String> <texture String>
+	/let <r Bool>/
+	/set r false/
+	/if (and (not (isNullOrEmpty id))
+		(and (not (isNullOrEmpty param)) (not (isNullOrEmpty texture)))
+	) then [
+		/asm ~~ call @___Media___material_set_sampler($id->$buffer, $param->$buffer, $texture->$buffer) => $r->$value; ~~/
+	]/
+	r
+]

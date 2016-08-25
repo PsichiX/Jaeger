@@ -1,4 +1,7 @@
 /import "/atom.jg"/
+/import "/media/RenderCommands.jg"/
+/import "/media/Vec2.jg"/
+/import "/media/Color.jg"/
 
 /jaegerify ~~
 	routine window_open(width:i32, height:i32, fullscreen:i8, title:*i8, vsync:i8):i8
@@ -40,6 +43,14 @@
 	~~	as [windowGetEventType Int]
 		from Media/
 
+/jaegerify ~~
+	routine window_clear(red:u8, green:u8, blue:u8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine window_render(batch:*_RenderCommands):i8
+	~~ from Media/
+
 [windowGetEventTypeId String
 	/let
 		<r String>
@@ -50,6 +61,43 @@
 		/set r "closed"/
 	] else [
 		/set r "undefined"/
+	]/
+	r
+]
+
+[windowClear Bool <red Int> <green Int> <blue Int>
+	/let
+		<r Bool>
+		~~ cr:u8 ~~
+		~~ cg:u8 ~~
+		~~ cb:u8 ~~
+		/
+	/set r false/
+	/if (and (not (isNull red)) (and (not (isNull green)) (not (isNull blue)))) then [
+		/asm ~~
+			conv $red->$value => $cr;
+			conv $green->$value => $cg;
+			conv $blue->$value => $cb;
+			call @___Media___window_clear($cr, $cg, $cb) => $r-> $value;
+			~~/
+	]/
+	r
+]
+
+[windowClear Bool <color Color>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNull color)) then [
+		/asm ~~ call @___Media___window_clear($color->$red, $color->$green, $color->$blue) => $r->$value; ~~/
+	]/
+	r
+]
+
+[windowRender Bool <batch RenderCommands>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNull batch)) then [
+		/asm ~~ call @___Media___window_render($batch->$handler) => $r->$value; ~~/
 	]/
 	r
 ]

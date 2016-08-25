@@ -1,0 +1,54 @@
+/import "/atom.jg"/
+/import "/templates/Nullable.jg"/
+
+{Vec2
+	<x Float>
+	<y Float>
+}
+
+[Vec2 Vec2
+	/let <this Vec2>/
+	/asm ~~ call @Vec2_new() => $this; ~~/
+	/set this.x 0.0/
+	/set this.y 0.0/
+	this
+]
+
+[Vec2 Vec2 <x Float> <y Float>
+	/let <this Vec2>/
+	/set this (Vec2)/
+	/set this.x x/
+	/set this.y y/
+	this
+]
+
+[clone Vec2 <v Vec2>
+	/let <r Vec2>/
+	/if (not (isNull v)) then [
+		/set r (Vec2 v.x v.y)/
+	]/
+	r
+]
+
+[<implement Nullable Vec2>]
+
+[isNullOrEmpty Bool <v Vec2>
+	/let <r Bool>/
+	/set r false/
+	/if (isNull v) then [
+		/set r true/
+	] elif (isNull v.x) then [
+		/set r true/
+	] elif (isNull v.y) then [
+		/set r true/
+	]/
+	r
+]
+
+[toString String <v Vec2>
+	/let <r String>/
+	/if (not (isNull v)) then [
+		/set r (add "[" (add (toString v.x) (add ";" (add (toString v.y) "]"))))/
+	]/
+	r
+]

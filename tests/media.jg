@@ -3,29 +3,70 @@
 /start main/
 
 /import "/io.jg"/
+/import "/resources.jg"/
 # import media helper to support window and scene rendering.
 /import "/media.jg"/
 
-[main Int
-	# declare variable to store current event type.
-	/let <type String>/
-	# try to open window.
-	/if (windowOpen 512 256 false (rapeString) true) then [
-		(roarLine "Window opened!")
-		# process events and render scene while window is open.
-		/while (windowIsOpen) then [
-			# process pending events.
-			/while (windowPollEvent) then [
-				/set type (windowGetEventTypeId)/
-				# close window when 'close' button is pressed.
-				/if (equals type "closed") then [
-					(windowClose)
-				]/
+[prepareAssets
+	(textureAcquire "tLogo" (fileReadContentsBuffer "logo.png" "app") true false)
+	(materialAcquire "mLogo"
+		(fileReadContents "texture.vert" "app")
+		(fileReadContents "texture.frag" "app")
+	)
+	(materialSetSampler "mLogo" "sBase" "tLogo")
+]
+
+[cleanupAssets
+	(textureRelease "tLogo")
+	(materialRelease "mLogo")
+]
+
+[batchScene <batch RenderCommands>
+	(begin batch)
+		(viewBegin batch (Vec2 256.0 256.0) (Vec2) 0.0 (Vec2) (Vec2 1.0 1.0) 1.0)
+			(sprite batch "mLogo"
+				(Vec2 256.0 256.0)
+				(Vec2)
+				15.0
+				(Vec2 1.0 1.0)
+				(Vec2 128.0 128.0)
+				(Color 0xFFFFFFFF)
+			)
+		(viewEnd batch)
+	(end batch)
+]
+
+[runGame
+	# declare variables.
+	/let
+		<type String>
+		<batch RenderCommands>
+		/
+	/set batch (RenderCommands)/
+	(prepareAssets)
+	(batchScene batch)
+	# process events and render scene while window is open.
+	/while (windowIsOpen) then [
+		# process pending events.
+		/while (windowPollEvent) then [
+			/set type (windowGetEventTypeId)/
+			# close window when 'close' button is pressed.
+			/if (equals type "closed") then [
+				(windowClose)
 			]/
-			# render scene onto screen.
-			(windowDisplay)
 		]/
-		(roarLine "Window closed!")
+		(windowClear (Color 0x404040FF))
+		(windowRender batch)
+		(windowDisplay)
+	]/
+	(cleanupAssets)
+]
+
+[main Int
+	(loadResourcesProtocol "file" "I4Protocol_file")
+	# try to open window.
+	/if (windowOpen 256 256 false "Hello World!" true) then [
+		(runGame)
 	]/
 	# return success exit code.
 	0

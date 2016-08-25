@@ -1,1 +1,5 @@
 /import "/media/window.jg"/
+/import "/media/RenderCommands.jg"/
+/import "/media/Vec2.jg"/
+/import "/media/Rect.jg"/
+/import "/media/Color.jg"/

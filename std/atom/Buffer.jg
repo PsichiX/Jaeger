@@ -1,0 +1,383 @@
+/import "/atom.jg"/
+/import "/templates/Nullable.jg"/
+
+{Buffer
+	~~ data:*i8 ~~
+	~~ size:i32 ~~
+}
+
+[Buffer Buffer
+	/let <this Buffer>/
+	/asm ~~
+		call @Buffer_new() => $this;
+		mov void null => $this->$data;
+		mov void 0:i32 => $this->$size;
+		~~/
+	this
+]
+
+[Buffer Buffer <size Int>
+	/let <this Buffer>/
+	/set this (Buffer)/
+	/if (not (isNull size)) then [
+		/asm ~~
+			new i8 $size->$value => $this->$data;
+			mov void $size->$value => $this->$size;
+			~~/
+	]/
+	this
+]
+
+[Buffer_Dispose <this Buffer>
+	/let ~~ isnil:i8 ~~/
+	/asm ~~
+		nil $this->$data => $isnil;
+		jif $isnil %failure %success;
+		success:
+		del $this->$data;
+		failure:
+		~~/
+]
+
+[clone Buffer <v Buffer>
+	/let <r Buffer>/
+	/if (not (isNull v)) then [
+		/set r (Buffer (size v))/
+		/asm ~~ movb i8 $v->$size $v->$data => $r->$data; ~~/
+	]/
+	r
+]
+
+[<implement Nullable Buffer>]
+
+[isNullOrEmpty Bool <v Buffer>
+	/let <r Bool>/
+	/set r false/
+	/asm ~~
+		nil $v => $r->$value;
+		jif $r->$value %exit %next;
+		next:
+		eq void 0:i32 $v->$size => $r->$value;
+		exit:
+		~~/
+	r
+]
+
+[size Int <v Buffer>
+	/let <r Int>/
+	/set r 0/
+	/if (not (isNull v)) then [
+		/asm ~~ mov void $v->$size => $r->$value; ~~/
+	]/
+	r
+]
+
+[write Int <v Buffer> <value Int> <offset Int>
+	/let
+		<r Int>
+		~~ status:i8 ~~
+		~~ pos:i32 ~~
+		~~ src:*i32 ~~
+		~~ dst:*i8 ~~
+		/
+	/if (and (not (isNull v))
+		(and (not (isNull value)) (not (isNull offset)))
+	) then [
+		/set r (clone offset)/
+		/asm ~~
+			add void $offset->$value {i32} => $pos;
+			ls void $pos $v->$size => $status;
+			jif $status %success %failure;
+			success:
+			add void $v->$data $offset->$value => $dst;
+			ptr $value->$value => $src;
+			movb i8 {i32} $src => $dst;
+			mov void $pos => $r->$value;
+			failure:
+			~~/
+	]/
+	r
+]
+
+[write Int <v Buffer> <value Float> <offset Int>
+	/let
+		<r Int>
+		~~ status:i8 ~~
+		~~ pos:i32 ~~
+		~~ src:*f32 ~~
+		~~ dst:*i8 ~~
+		/
+	/if (and (not (isNull v))
+		(and (not (isNull value)) (not (isNull offset)))
+	) then [
+		/set r (clone offset)/
+		/asm ~~
+			add void $offset->$value {f32} => $pos;
+			ls void $pos $v->$size => $status;
+			jif $status %success %failure;
+			success:
+			add void $v->$data $offset->$value => $dst;
+			ptr $value->$value => $src;
+			movb i8 {f32} $src => $dst;
+			mov void $pos => $r->$value;
+			failure:
+			~~/
+	]/
+	r
+]
+
+[write Int <v Buffer> <value String> <offset Int>
+	/let
+		<r Int>
+		~~ status:i8 ~~
+		~~ pos:i32 ~~
+		~~ dst:*i8 ~~
+		/
+	/if (and (not (isNull v))
+		(and (not (isNull value)) (not (isNull offset)))
+	) then [
+		/set r (clone offset)/
+		/asm ~~
+			add void $offset->$value $value->$length => $pos;
+			ls void $pos $v->$size => $status;
+			jif $status %success %failure;
+			success:
+			add void $v->$data $offset->$value => $dst;
+			movb i8 $value->$length $value->$buffer => $dst;
+			mov void $pos => $r->$value;
+			failure:
+			~~/
+	]/
+	r
+]
+
+[write Int <v Buffer> <value Handle> <offset Int>
+	/let
+		<r Int>
+		~~ status:i8 ~~
+		~~ pos:i32 ~~
+		~~ src:*i32 ~~
+		~~ dst:*i8 ~~
+		/
+	/if (and (not (isNull v))
+		(and (not (isNull value)) (not (isNull offset)))
+	) then [
+		/set r (clone offset)/
+		/asm ~~
+			add void $offset->$value {i32} => $pos;
+			ls void $pos $v->$size => $status;
+			jif $status %success %failure;
+			success:
+			add void $v->$data $offset->$value => $dst;
+			ptr $value->$value => $src;
+			movb i8 {i32} $src => $dst;
+			mov void $pos => $r->$value;
+			failure:
+			~~/
+	]/
+	r
+]
+
+[write Int <v Buffer> <value Bool> <offset Int>
+	/let
+		<r Int>
+		~~ status:i8 ~~
+		~~ pos:i32 ~~
+		~~ src:*i8 ~~
+		~~ dst:*i8 ~~
+		/
+	/if (and (not (isNull v))
+		(and (not (isNull value)) (not (isNull offset)))
+	) then [
+		/set r (clone offset)/
+		/asm ~~
+			add void $offset->$value {i8} => $pos;
+			ls void $pos $v->$size => $status;
+			jif $status %success %failure;
+			success:
+			add void $v->$data $offset->$value => $dst;
+			ptr $value->$value => $src;
+			movb i8 {i8} $src => $dst;
+			mov void $pos => $r->$value;
+			failure:
+			~~/
+	]/
+	r
+]
+
+[write Int <v Buffer> <value Buffer> <offset Int>
+	/let
+		<r Int>
+		~~ status:i8 ~~
+		~~ pos:i32 ~~
+		~~ dst:*i8 ~~
+		/
+	/if (and (not (isNull v))
+		(and (not (isNull value)) (not (isNull offset)))
+	) then [
+		/set r (clone offset)/
+		/asm ~~
+			add void $offset->$value $value->$size => $pos;
+			ls void $pos $v->$size => $status;
+			jif $status %success %failure;
+			success:
+			add void $v->$data $offset->$value => $dst;
+			movb i8 $value->$size $value->$data => $dst;
+			mov void $pos => $r->$value;
+			failure:
+			~~/
+	]/
+	r
+]
+
+[readInt Int <v Buffer> <offset Int>
+	/let
+		<r Int>
+		~~ status:i8 ~~
+		~~ pos:i32 ~~
+		~~ src:*i8 ~~
+		~~ dst:*i32 ~~
+		/
+	/if (and (not (isNull v)) (not (isNull offset))) then [
+		/set r 0/
+		/asm ~~
+			add void $offset->$value {i32} => $pos;
+			ls void $pos $v->$size => $status;
+			jif $status %success %failure;
+			success:
+			add void $v->$data $offset->$value => $src;
+			ptr $r->$value => $dst;
+			movb i8 {i32} $src => $dst;
+			failure:
+			~~/
+	]/
+	r
+]
+
+[readFloat Float <v Buffer> <offset Int>
+	/let
+		<r Float>
+		~~ status:i8 ~~
+		~~ pos:i32 ~~
+		~~ src:*i8 ~~
+		~~ dst:*i32 ~~
+		/
+	/if (and (not (isNull v)) (not (isNull offset))) then [
+		/set r 0.0/
+		/asm ~~
+			add void $offset->$value {f32} => $pos;
+			ls void $pos $v->$size => $status;
+			jif $status %success %failure;
+			success:
+			add void $v->$data $offset->$value => $src;
+			ptr $r->$value => $dst;
+			movb i8 {f32} $src => $dst;
+			failure:
+			~~/
+	]/
+	r
+]
+
+[readString String <v Buffer> <offset Int> <length Int>
+	/let
+		<r String>
+		~~ status:i8 ~~
+		~~ pos:i32 ~~
+		~~ src:*i8 ~~
+		/
+	/if (and (not (isNull v))
+		(and (not (isNull offset)) (not (isNull length)))
+	) then [
+		/set r ""/
+		(String_Dispose r)
+		/asm ~~
+			add void $offset->$value $length->$value => $pos;
+			ls void $pos $v->$size => $status;
+			jif $status %success %failure;
+			success:
+			add void $length->$value 1:i32 => $pos;
+			new i8 $pos => $r->$buffer;
+			mov void $length->$value => $r->$length;
+			add void $v->$data $offset->$value => $src;
+			movb i8 $length->$value $src => $r->$buffer;
+			add void $r->$buffer $r->$length => $src;
+			movb i8 1:i32 "":*i8 => $src;
+			failure:
+			~~/
+	]/
+	r
+]
+
+[readHandle Handle <v Buffer> <offset Int>
+	/let
+		<r Handle>
+		~~ status:i8 ~~
+		~~ pos:i32 ~~
+		~~ src:*i8 ~~
+		~~ dst:*i32 ~~
+		/
+	/if (and (not (isNull v)) (not (isNull offset))) then [
+		/set r (Handle)/
+		/asm ~~
+			add void $offset->$value {i32} => $pos;
+			ls void $pos $v->$size => $status;
+			jif $status %success %failure;
+			success:
+			add void $v->$data $offset->$value => $src;
+			ptr $r->$value => $dst;
+			movb i8 {i32} $src => $dst;
+			failure:
+			~~/
+	]/
+	r
+]
+
+[readBool Bool <v Buffer> <offset Int>
+	/let
+		<r Bool>
+		~~ status:i8 ~~
+		~~ pos:i32 ~~
+		~~ src:*i8 ~~
+		~~ dst:*i32 ~~
+		/
+	/if (and (not (isNull v)) (not (isNull offset))) then [
+		/set r false/
+		/asm ~~
+			add void $offset->$value {i8} => $pos;
+			ls void $pos $v->$size => $status;
+			jif $status %success %failure;
+			success:
+			add void $v->$data $offset->$value => $src;
+			ptr $r->$value => $dst;
+			movb i8 {i8} $src => $dst;
+			failure:
+			~~/
+	]/
+	r
+]
+
+[readBuffer Buffer <v Buffer> <offset Int> <length Int>
+	/let
+		<r Buffer>
+		~~ status:i8 ~~
+		~~ pos:i32 ~~
+		~~ src:*i8 ~~
+		/
+	/if (and (not (isNull v))
+		(and (not (isNull offset)) (not (isNull length)))
+	) then [
+		/set r (Buffer)/
+		/asm ~~
+			add void $offset->$value $length->$value => $pos;
+			ls void $pos $v->$size => $status;
+			jif $status %success %failure;
+			success:
+			new i8 $length->$value => $r->$data;
+			mov void $length->$value => $r->$size;
+			add void $v->$data $offset->$value => $src;
+			movb i8 $length->$value $src => $r->$data;
+			failure:
+			~~/
+	]/
+	r
+]

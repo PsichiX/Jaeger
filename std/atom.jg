@@ -3,3 +3,4 @@
 /import "/atom/String.jg"/
 /import "/atom/Bool.jg"/
 /import "/atom/Handle.jg"/
+/import "/atom/Buffer.jg"/

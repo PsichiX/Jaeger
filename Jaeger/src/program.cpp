@@ -120,7 +120,7 @@ void Program::Structure::assemble( std::ostream& output )
     for( auto& f : fields )
         if( f->assembly.empty() )
             output << "mov void null => $this->$" << f->id << ";" << std::endl;
-    output << "mov void 0:i32 => $this->$___refcount___;" << std::endl;
+    output << "mov void 1:i32 => $this->$___refcount___;" << std::endl;
     output << "mov void 0:i8 => $this->$___disposing___;" << std::endl;
     output << "ret $this;" << std::endl;
     output << "};" << std::endl;
@@ -233,7 +233,7 @@ void Program::ConstantFloat::assemble( std::ostream& output, bool dropValue )
 {
     if( dropValue )
         return;
-    output << "call @___MakeFloatConstant___($stack, " << value << ":f32);" << std::endl;
+    output << "call @___MakeFloatConstant___($stack, " << std::showpoint << value << ":f32);" << std::endl;
 }
 
 Program::ConstantString::ConstantString( const std::string& v )
@@ -789,18 +789,11 @@ void Program::Function::assemble( std::ostream& output, Program* program )
     if( constructor )
     {
         output << "routine " << makeUID() << "(stack:i32):" << std::endl;
-        output << "<this:*" << constructor->id;
-        for( auto& a : args )
-        {
-            output << ", ";
-            a->assemble( output );
-        }
-        output << ">" << std::endl;
+        output << "<this:*" << constructor->id << ">" << std::endl;
         output << "{" << std::endl;
         for( std::vector< FieldPtr >::reverse_iterator it = args.rbegin(); it != args.rend(); ++it )
             output << "cpop $stack void => $" << it->get()->id << ";" << std::endl;
         output << "call @" << constructor->id << "_new() => $this;" << std::endl;
-        output << "call @" << constructor->id << "_Ref($this);" << std::endl;
         output << "cpush $stack void $this;" << std::endl;
         output << "};" << std::endl;
         output << std::endl;
@@ -1271,7 +1264,7 @@ void Program::validate( Builder* builder )
     {
         ps = s.second.get();
         ps->validate( builder, this );
-        if( !functions.count( ps->id ) )
+        if( !functions.count( ps->id + "_" ) )
         {
             f = builder->makeFunction( "[" + ps->id + " " + ps->id + "]" );
             if( !f )

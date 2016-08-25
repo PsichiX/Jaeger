@@ -1,0 +1,101 @@
+/import "/atom.jg"/
+/import "/templates/Nullable.jg"/
+
+{Color
+	~~ red:u8 ~~
+	~~ green:u8 ~~
+	~~ blue:u8 ~~
+	~~ alpha:u8 ~~
+}
+
+[Color Color
+	/let <this Color>/
+	/asm ~~
+		call @Color_new() => $this;
+		mov void 0:u8 => $this->$red;
+		mov void 0:u8 => $this->$green;
+		mov void 0:u8 => $this->$blue;
+		mov void 0:u8 => $this->$alpha;
+		~~/
+	this
+]
+
+[Color Color <v Int>
+	/let
+		<this Color>
+		~~ tmp:i32 ~~
+		/
+	/set this (Color)/
+	/if (not (isNull v)) then [
+		/asm ~~
+			mov u8 $v->$value => $this->$alpha;
+			rsh i32 $v->$value 8:i32 => $tmp;
+			mov u8 $tmp => $this->$blue;
+			rsh i32 $v->$value 16:i32 => $tmp;
+			mov u8 $tmp => $this->$green;
+			rsh i32 $v->$value 24:i32 => $tmp;
+			mov u8 $tmp => $this->$red;
+			~~/
+	]/
+	this
+]
+
+[Color Color <red Int> <green Int> <blue Int> <alpha Int>
+	/let
+		<this Color>
+		~~ tmp:u32 ~~
+		/
+	/set this (Color)/
+	/if (and (not (isNull red))
+		(and (not (isNull green))
+			(and (not (isNull blue)) (not (isNull alpha)))
+		)
+	) then [
+		/asm ~~
+			conv $red->$value => $this->$red;
+			conv $green->$value => $this->$green;
+			conv $blue->$value => $this->$blue;
+			conv $alpha->$value => $this->$alpha;
+			~~/
+	]/
+	this
+]
+
+[clone Color <v Color>
+	/let <r Color>/
+	/set r (Color)/
+	/if (not (isNull v)) then [
+		/asm ~~
+			mov void $v->$red => $r->$red;
+			mov void $v->$green => $r->$green;
+			mov void $v->$blue => $r->$blue;
+			mov void $v->$alpha => $r->$alpha;
+			~~/
+	]/
+	r
+]
+
+[<implement Nullable Color>]
+
+[toString String <v Color>
+	/let
+		<r String>
+		~~ cr:u16 ~~
+		~~ cg:u16 ~~
+		~~ cb:u16 ~~
+		~~ ca:u16 ~~
+		/
+	/if (not (isNull v)) then [
+		/set r (String)/
+		(String_Dispose r)
+		/asm ~~
+			conv $v->$red => $cr;
+			conv $v->$green => $cg;
+			conv $v->$blue => $cb;
+			conv $v->$alpha => $ca;
+			call @___String___format_new("[R:${u8};G:${u8};B:${u8}:A:${u8}]":*i8, $cr, $cg, $cb, $ca) => $r->$buffer;
+			call @___String___length($r->$buffer) => $r->$length;
+			~~/
+	]/
+	r
+]
