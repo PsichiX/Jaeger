@@ -155,12 +155,14 @@
 [substring String <v String> <start Int> <length Int>
 	/let <r String>/
 	/if (and (not (isNull v)) (and (not (isNull start)) (not (isNull length)))) then [
-		/set r (String)/
-		(String_Dispose r)
-		/asm ~~
-			call @___String___substring_new($v->$buffer, $start->$value, $length->$value) => $r->$buffer;
-			call @___String___length($r->$buffer) => $r->$length;
-			~~/
+		/if (and (greater start 0) (and (greater length 0) (not (greater (add start length) (size v))))) then [
+			/set r (String)/
+			(String_Dispose r)
+			/asm ~~
+				call @___String___substring_new($v->$buffer, $start->$value, $length->$value) => $r->$buffer;
+				call @___String___length($r->$buffer) => $r->$length;
+				~~/
+		]/
 	]/
 	r
 ]

@@ -52,7 +52,7 @@
 
 [isNullOrEmpty Bool <v Buffer>
 	/let <r Bool>/
-	/set r false/
+	/set r true/
 	/asm ~~
 		nil $v => $r->$value;
 		jif $r->$value %exit %next;

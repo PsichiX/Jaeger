@@ -1,6 +1,12 @@
 /import "/atom.jg"/
 /import "/templates/Nullable.jg"/
 
+[COLOR_BLACK Color (Color 0x000000FF)]
+[COLOR_WHITE Color (Color 0xFFFFFFFF)]
+[COLOR_RED Color (Color 0xFF0000FF)]
+[COLOR_GREEN Color (Color 0x00FF00FF)]
+[COLOR_BLUE Color (Color 0x0000FFFF)]
+
 {Color
 	~~ red:u8 ~~
 	~~ green:u8 ~~

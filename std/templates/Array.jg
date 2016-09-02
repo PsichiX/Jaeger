@@ -1,0 +1,195 @@
+/import "/atom.jg"/
+
+[<template Array
+	{Array?{0}
+		~~ items:**?{0} ~~
+		~~ count:i32 ~~
+	}
+
+	[Array?{0} Array?{0}
+		/let <this Array?{0}>/
+		/asm ~~
+			call @Array?{0}_new() => $this;
+			mov void null => $this->$items;
+			mov void 0:i32 => $this->$count;
+			~~/
+		this
+	]
+
+	[Array?{0}_Dispose <this Array?{0}>
+		/let
+			~~ status:i8 ~~
+			~~ iterator:i32 ~~
+			~~ ptr:**?{0} ~~
+			~~ val:*?{0} ~~
+			/
+		/if (not (isNull this)) then [
+			/asm ~~
+				mov void $this->$count => $iterator;
+				mov void $this->$items => $ptr;
+				loop:
+				gr void $iterator 0:i32 => $status;
+				jif $status %iteration %end;
+				iteration:
+				val $ptr => $val;
+				call @?{0}_Unref($val, $stack) => $val;
+				add void $ptr {*?{0}} => $ptr;
+				sub void $iterator 1:i32 => $iterator;
+				goto %loop;
+				end:
+				del $this->$items;
+				~~/
+		]/
+	]
+
+	[clone Array?{0} <v Array?{0}>
+		/let
+			<r Array?{0}>
+			~~ status:i8 ~~
+			~~ size:i32 ~~
+			~~ iterator:i32 ~~
+			~~ ptr:**?{0} ~~
+			~~ val:*?{0} ~~
+			/
+		/if (not (isNull v)) then [
+			/set r (Array?{0})/
+			/asm ~~
+				new *?{0} $v->$count => $r->$items;
+				mov void $v->$count => $r->$count;
+				mul void $v->$count {*?{0}} => $size;
+				movb *?{0} $size $v->$items => $r->$items;
+				mov void $r->$count => $iterator;
+				mov void $r->$items => $ptr;
+				loop:
+				gr void $iterator 0:i32 => $status;
+				jif $status %iteration %end;
+				iteration:
+				val $ptr => $val;
+				call @?{0}_Ref($val, $stack);
+				add void $ptr {*?{0}} => $ptr;
+				sub void $iterator 1:i32 => $iterator;
+				goto %loop;
+				end:
+				~~/
+		]/
+		r
+	]
+
+	[isNull Bool <v Array?{0}>
+		/let <r Bool>/
+		/set r false/
+		/asm ~~ nil $v => $r->$value; ~~/
+		r
+	]
+
+	[isNullOrEmpty Bool <v Array?{0}>
+		/let <r Bool>/
+		/set r false/
+		/if (isNull v) then [
+			/set r true/
+		] else [
+			/if (not (greater (size v) 0)) then [
+				/set r true/
+			]/
+		]/
+		r
+	]
+
+	[size Int <v Array?{0}>
+		/let <r Int>/
+		/set r 0/
+		/if (not (isNull v)) then [
+			/asm ~~ mov void $v->$count => $r->$value; ~~/
+		]/
+		r
+	]
+
+	[add Array?{0} <a Array?{0}> <b Array?{0}>
+		/let
+			<r Array?{0}>
+			~~ status:i8 ~~
+			~~ size:i32 ~~
+			~~ count:i32 ~~
+			~~ iterator:i32 ~~
+			~~ ptr:**?{0} ~~
+			~~ val:*?{0} ~~
+			/
+		/if (isNullOrEmpty a) then [
+			/if (not (isNullOrEmpty b)) then [
+				/set r (clone b)/
+			]/
+		] elif (isNullOrEmpty b) then [
+			/if (not (isNullOrEmpty a)) then [
+				/set r (clone a)/
+			]/
+		] else [
+			/set r (Array?{0})/
+			(Array?{0}_Dispose r)
+			/asm ~~
+				add void $a->$count $b->$count => $count;
+				new *?{0} $count => $r->$items;
+				mov void $count => $r->$count;
+				mul void $a->$count {*?{0}} => $size;
+				mov void $r->$items => $ptr;
+				movb *?{0} $size $a->$items => $ptr;
+				add void $ptr $size => $ptr;
+				mul void $b->$count {*?{0}} => $size;
+				movb *?{0} $size $b->$items => $ptr;
+				mov void $r->$count => $iterator;
+				mov void $r->$items => $ptr;
+				loop:
+				gr void $iterator 0:i32 => $status;
+				jif $status %iteration %end;
+				iteration:
+				val $ptr => $val;
+				call @?{0}_Ref($val, $stack);
+				add void $ptr {*?{0}} => $ptr;
+				sub void $iterator 1:i32 => $iterator;
+				goto %loop;
+				end:
+				~~/
+		]/
+		r
+	]
+
+	[subarray Array?{0} <v Array?{0}> <start Int> <length Int>
+		/let
+			<r Array?{0}>
+			~~ status:i8 ~~
+			~~ count:i32 ~~
+			~~ iterator:i32 ~~
+			~~ ptr:**?{0} ~~
+			~~ val:*?{0} ~~
+			/
+		/if (and (not (isNullOrEmpty v)) (and (not (isNull start)) (not (isNull length)))) then [
+			/if (and (equals start 0) (equals length (size v))) then [
+				/set r (clone v)/
+			] elif (and (greater start 0) (and (greater length 0) (not (greater (add start length) (size v))))) then [
+				/set r (Array?{0})/
+				(Array?{0}_Dispose r)
+				/asm ~~
+					new *?{0} $length => $r->$items;
+					mov void $length => $r->$count;
+					mul void $start {*?{0}} => $size;
+					mov void $v->$items => $ptr;
+					add void $ptr $size => $ptr;
+					mul void $length {*?{0}} => $size;
+					movb *?{0} $size $ptr => $r->$items;
+					mov void $r->$count => $iterator;
+					mov void $r->$items => $ptr;
+					loop:
+					gr void $iterator 0:i32 => $status;
+					jif $status %iteration %end;
+					iteration:
+					val $ptr => $val;
+					call @?{0}_Ref($val, $stack);
+					add void $ptr {*?{0}} => $ptr;
+					sub void $iterator 1:i32 => $iterator;
+					goto %loop;
+					end:
+					~~/
+			]/
+		]/
+		r
+	]
+>]

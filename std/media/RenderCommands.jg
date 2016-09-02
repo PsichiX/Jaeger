@@ -32,7 +32,7 @@
 	~~ from Media/
 
 /jaegerify ~~
-	routine graphics_batch_text(batch:*_RenderCommands):i8
+	routine graphics_batch_text(batch:*_RenderCommands, font:*i8, value:*i8, cs:u32, st:u32, px:f32, py:f32, r:f32, sx:f32, sy:f32, ox:f32, oy:f32, cr:u8, cg:u8, cb:u8, ca:u8):i8
 	~~ from Media/
 
 /jaegerify ~~
@@ -53,6 +53,18 @@
 
 /jaegerify ~~
 	routine texture_exists(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine font_acquire(id:*i8, data:*i8, size:i32):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine font_release(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine font_exists(id:*i8):i8
 	~~ from Media/
 
 /jaegerify ~~
@@ -81,6 +93,12 @@
 		data:i64;
 	};
 	~~/
+
+[TEXT_STYLE_REGULAR Int 0x0]
+[TEXT_STYLE_BOLD Int 0x1]
+[TEXT_STYLE_ITALIC Int 0x2]
+[TEXT_STYLE_UNDERLINED Int 0x4]
+[TEXT_STYLE_STRIKE_THROUGH Int 0x8]
 
 {RenderCommands
 	~~ handler:*_RenderCommands ~~
@@ -204,11 +222,52 @@
 	r
 ]
 
-[text Bool <v RenderCommands>
-	/let <r Bool>/
+[text Bool <v RenderCommands> <font String> <value String> <charSize Int> <style Int> <position Vec2> <rotation Float> <scale Vec2> <origin Vec2> <color Color>
+	/let
+		<r Bool>
+		~~ cs:u32 ~~
+		~~ s:u32 ~~
+		/
 	/set r false/
-	/if (not (isNull v)) then [
-		/asm ~~ call @___Media___graphics_batch_text($v->$handler) => $r->$value; ~~/
+	/if (and (not (isNull v))
+		(and (not (isNullOrEmpty font))
+			(and (not (isNullOrEmpty value))
+				(and (not (isNull charSize))
+					(and (not (isNull style))
+						(and (not (isNullOrEmpty position))
+							(and (not (isNull rotation))
+								(and (not (isNullOrEmpty scale))
+									(and (not (isNullOrEmpty origin)) (not (isNull color)))
+								)
+							)
+						)
+					)
+				)
+			)
+		)
+	) then [
+		/asm ~~
+			conv $charSize->$value => $cs;
+			conv $style->$value => $s;
+			call @___Media___graphics_batch_text(
+				$v->$handler,
+				$font->$buffer,
+				$value->$buffer,
+				$cs,
+				$s,
+				$position->$x->$value,
+				$position->$y->$value,
+				$rotation->$value,
+				$scale->$x->$value,
+				$scale->$y->$value,
+				$origin->$x->$value,
+				$origin->$y->$value,
+				$color->$red,
+				$color->$green,
+				$color->$blue,
+				$color->$alpha
+			) => $r->$value;
+		~~/
 	]/
 	r
 ]
@@ -248,7 +307,7 @@
 	/let <r Bool>/
 	/set r false/
 	/if (and (not (isNullOrEmpty id))
-		(and (not (isNull buffer))
+		(and (not (isNullOrEmpty buffer))
 			(and (not (isNull smooth)) (not (isNull repeated)))
 		)
 	) then [
@@ -271,6 +330,33 @@
 	/set r false/
 	/if (not (isNullOrEmpty id)) then [
 		/asm ~~ call @___Media___texture_exists($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[fontAcquire Bool <id String> <buffer Buffer>
+	/let <r Bool>/
+	/set r false/
+	/if (and (not (isNullOrEmpty id)) (not (isNullOrEmpty buffer))) then [
+		/asm ~~ call @___Media___font_acquire($id->$buffer, $buffer->$data, $buffer->$size) => $r->$value; ~~/
+	]/
+	r
+]
+
+[fontRelease Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___font_release($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[fontExists Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___font_exists($id->$buffer) => $r->$value; ~~/
 	]/
 	r
 ]

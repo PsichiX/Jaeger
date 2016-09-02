@@ -6,6 +6,9 @@
 /import "/resources.jg"/
 # import media helper to support window and scene rendering.
 /import "/media.jg"/
+/import "/templates/Array.jg"/
+
+[<implement Array Int>]
 
 [prepareAssets
 	(textureAcquire "tLogo" (fileReadContentsBuffer "logo.png" "app") true false)
@@ -14,23 +17,51 @@
 		(fileReadContents "texture.frag" "app")
 	)
 	(materialSetSampler "mLogo" "sBase" "tLogo")
+	(textureAcquire "tWater" (fileReadContentsBuffer "water.jpg" "app") true true)
+	(materialAcquire "mWater"
+		(fileReadContents "texture.vert" "app")
+		(fileReadContents "texture.frag" "app")
+	)
+	(materialSetSampler "mWater" "sBase" "tWater")
+	(fontAcquire "fVerdana" (fileReadContentsBuffer "verdana.ttf" "app"))
 ]
 
 [cleanupAssets
 	(textureRelease "tLogo")
 	(materialRelease "mLogo")
+	(textureRelease "tWater")
+	(materialRelease "mWater")
+	(fontRelease "fVerdana")
 ]
 
 [batchScene <batch RenderCommands>
 	(begin batch)
 		(viewBegin batch (Vec2 256.0 256.0) (Vec2) 0.0 (Vec2) (Vec2 1.0 1.0) 1.0)
+			(sprite batch "mWater"
+				(Vec2 256.0 256.0)
+				(VEC2_ZERO)
+				0.0
+				(VEC2_ONE)
+				(VEC2_HALF)
+				(COLOR_WHITE)
+			)
 			(sprite batch "mLogo"
 				(Vec2 256.0 256.0)
-				(Vec2)
+				(VEC2_ZERO)
 				15.0
-				(Vec2 1.0 1.0)
-				(Vec2 128.0 128.0)
-				(Color 0xFFFFFFFF)
+				(VEC2_ONE)
+				(VEC2_HALF)
+				(COLOR_WHITE)
+			)
+			(text batch "fVerdana"
+				"Hello World!"
+				30
+				(TEXT_STYLE_BOLD)
+				(VEC2_ZERO)
+				0.0
+				(VEC2_ONE)
+				(VEC2_HALF)
+				(COLOR_BLACK)
 			)
 		(viewEnd batch)
 	(end batch)
@@ -63,6 +94,7 @@
 ]
 
 [main Int
+	# ensure all needed protocols are loaded.
 	(loadResourcesProtocol "file" "I4Protocol_file")
 	# try to open window.
 	/if (windowOpen 256 256 false "Hello World!" true) then [

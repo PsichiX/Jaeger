@@ -1,0 +1,227 @@
+###/import "/atom.jg"/
+
+/jaegerify ~~
+	routine music_acquire(id:*i8, data:*i8, size:i32):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine music_release(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine music_exists(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine music_play(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine music_pause(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine music_stop(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine music_setup(id:*i8, loop:i8, pitch:f32, volume:i32):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine soundbuffer_acquire(id:*i8, data:*i8, size:i32):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine soundbuffer_release(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine soundbuffer_exists(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine sound_acquire(id:*i8, buffer:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine sound_release(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine sound_exists(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine sound_play(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine sound_pause(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine sound_stop(id:*i8):i8
+	~~ from Media/
+
+/jaegerify ~~
+	routine sound_setup(id:*i8, loop:i8, pitch:f32, volume:i32):i8
+	~~ from Media/
+
+[musicAcquire Bool <id String> <buffer Buffer>
+	/let <r Bool>/
+	/set r false/
+	/if (and (not (isNullOrEmpty id)) (not (isNullOrEmpty buffer))) then [
+		/asm ~~ call @___Media___music_acquire($id->$buffer, $buffer->$data, $buffer->$size) => $r->$value; ~~/
+	]/
+	r
+]
+
+[musicRelease Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___music_release($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[musicExists Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___music_exists($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[musicPlay Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___music_play($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[musicPause Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___music_pause($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[musicStop Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___music_stop($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[musicSetup Bool <id String> <loop Bool> <pitch Float> <volume Int>
+	/let <r Bool>/
+	/set r false/
+	/if (and (not (isNullOrEmpty id))
+		(and (not (isNull pitch)) (not (isNull volume)))
+	) then [
+		/asm ~~ call @___Media___music_setup($id->$buffer, $loop->$value, $pitch->$value, $volume->$value) => $r->$value; ~~/
+	]/
+	r
+]
+
+[soundBufferAcquire Bool <id String> <buffer Buffer>
+	/let <r Bool>/
+	/set r false/
+	/if (and (not (isNullOrEmpty id)) (not (isNullOrEmpty buffer))) then [
+		/asm ~~ call @___Media___soundbuffer_acquire($id->$buffer, $buffer->$data, $buffer->$size) => $r->$value; ~~/
+	]/
+	r
+]
+
+[soundBufferRelease Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___soundbuffer_release($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[soundBufferExists Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___soundbuffer_exists($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[soundAcquire Bool <id String> <buffer String>
+	/let <r Bool>/
+	/set r false/
+	/if (and (not (isNullOrEmpty id)) (not (isNullOrEmpty buffer))) then [
+		/asm ~~ call @___Media___sound_acquire($id->$buffer, $buffer->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[soundRelease Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___sound_release($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[soundExists Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___sound_exists($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[soundPlay Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___sound_play($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[soundPause Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___sound_pause($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[soundStop Bool <id String>
+	/let <r Bool>/
+	/set r false/
+	/if (not (isNullOrEmpty id)) then [
+		/asm ~~ call @___Media___sound_stop($id->$buffer) => $r->$value; ~~/
+	]/
+	r
+]
+
+[soundSetup Bool <id String> <loop Bool> <pitch Float> <volume Int>
+	/let <r Bool>/
+	/set r false/
+	/if (and (not (isNullOrEmpty id))
+		(and (not (isNull pitch)) (not (isNull volume)))
+	) then [
+		/asm ~~ call @___Media___sound_setup($id->$buffer, $loop->$value, $pitch->$value, $volume->$value) => $r->$value; ~~/
+	]/
+	r
+]
+###

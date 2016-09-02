@@ -109,6 +109,42 @@
 	r
 ]
 
+[and Int <a Int> <b Int>
+	/let <r Int>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r (Int)/
+		/asm ~~ and void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[or Int <a Int> <b Int>
+	/let <r Int>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r (Int)/
+		/asm ~~ or void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[xor Int <a Int> <b Int>
+	/let <r Int>/
+	/if (and (not (isNull a)) (not (isNull b))) then [
+		/set r (Int)/
+		/asm ~~ xor void $a->$value $b->$value => $r->$value; ~~/
+	]/
+	r
+]
+
+[neg Int <v Int>
+	/let <r Int>/
+	/if (not (isNull v)) then [
+		/set r (Int)/
+		/asm ~~ neg void $v->$value => $r->$value; ~~/
+	]/
+	r
+]
+
 [equals Bool <a Int> <b Int>
 	/let <r Bool>/
 	/if (and (not (isNull a)) (not (isNull b))) then [

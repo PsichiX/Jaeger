@@ -1329,11 +1329,13 @@ I4::CompilationStatePtr Program::assemble( Builder* builder, std::size_t stackSi
     ss << "};" << std::endl;
     ss << std::endl;
     ss << "routine ___MakeStringConstant___(stack:i32, value:*i8, length:i32):" << std::endl;
-    ss << "<this:*String>" << std::endl;
+    ss << "<this:*String, size:i32>" << std::endl;
     ss << "{" << std::endl;
     ss << "call @String_($stack);" << std::endl;
     ss << "cpop $stack void => $this;" << std::endl;
-    ss << "mov void $value => $this->$buffer;" << std::endl;
+    ss << "add void $length 1:i32 => $size;" << std::endl;
+    ss << "new i8 $size => $this->$buffer;" << std::endl;
+    ss << "movb i8 $size $value => $this->$buffer;" << std::endl;
     ss << "mov void $length => $this->$length;" << std::endl;
     ss << "cpush $stack void $this;" << std::endl;
     ss << "};" << std::endl;

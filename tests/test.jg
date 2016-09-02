@@ -55,6 +55,7 @@
 # function called at program startup.
 # it must return integer value which is exit code (0 means success).
 [main Int
+	(loadResourcesProtocol "file" "I4Protocol_file")
 	# `let` directive declares function local storage.
 	# be aware that those objects are nullified,
 	# so you have to create and assign objects to them before they will be used.
@@ -77,7 +78,7 @@
 	/set d true/
 	/set pathFrom "Person.jg"/
 	/set pathTo "Person2.jg"/
-	/set content (fileGetContents pathFrom)/
+	/set content (fileReadContents pathFrom "app")/
 
 	# this mysterious `&` character is used as arguments delimiter.
 	# that means tou can call the same function multiple times
@@ -89,12 +90,12 @@
 		b &
 		c &
 		d &
-		(concat "Jaeger" "Works!") &
-		(concat "File path: " pathFrom) &
+		(add "Jaeger" "Works!") &
+		(add "File path: " pathFrom) &
 		"File content:" &
 		content
 		)
-	(fileSetContents pathTo content)
+	(fileWriteContents pathTo "app" content)
 
 	# compiler will optimize obvious checks so there will be just roarLine call.
 	/if true then [
