@@ -1,0 +1,52 @@
+#!/usr/bin/env jaeger
+
+/start main/
+
+/import "/io.jg"/
+/import "/templates/Array.jg"/
+
+[<implement Array Int>]
+
+[printArray <values ArrayInt>
+	/let
+		<i Int>
+		<c Int>
+		/
+	/set i 0/
+	/set c (size values)/
+	/while (less i c) then [
+		(roarLine (get values i))
+		/set i (add i 1)/
+	]/
+]
+
+[sum Int <values ArrayInt>
+	/let
+		<r Int>
+		<i Int>
+		/
+	/set r 0/
+	/set i (size values)/
+	/while (greater i 0) then [
+		/set i (sub i 1)/
+		/set r (add r (get values i))/
+	]/
+	r
+]
+
+[average Int <values ArrayInt>
+	(div (sum values) (size values))
+]
+
+[main Int
+	/let <v ArrayInt>/
+	/set v (ArrayInt)/
+	/set v (push v 1)/
+	/set v (push v 2)/
+	/set v (push v 3)/
+	/set v (push v 4)/
+	/set v (push v 5)/
+	(roarLine "AVERAGE:" & (average v) & "VALUES:")
+	(printArray v)
+	0
+]

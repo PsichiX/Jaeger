@@ -85,13 +85,13 @@
 	) then [
 		/set r (clone offset)/
 		/asm ~~
-			add void $offset->$value {i32} => $pos;
+			add void $offset->$value {i32}:i32 => $pos;
 			ls void $pos $v->$size => $status;
 			jif $status %success %failure;
 			success:
 			add void $v->$data $offset->$value => $dst;
 			ptr $value->$value => $src;
-			movb i8 {i32} $src => $dst;
+			movb i32 1:i32 $src => $dst;
 			mov void $pos => $r->$value;
 			failure:
 			~~/
@@ -112,13 +112,13 @@
 	) then [
 		/set r (clone offset)/
 		/asm ~~
-			add void $offset->$value {f32} => $pos;
+			add void $offset->$value {f32}:i32 => $pos;
 			ls void $pos $v->$size => $status;
 			jif $status %success %failure;
 			success:
 			add void $v->$data $offset->$value => $dst;
 			ptr $value->$value => $src;
-			movb i8 {f32} $src => $dst;
+			movb f32 1:i32 $src => $dst;
 			mov void $pos => $r->$value;
 			failure:
 			~~/
@@ -164,13 +164,13 @@
 	) then [
 		/set r (clone offset)/
 		/asm ~~
-			add void $offset->$value {i32} => $pos;
+			add void $offset->$value {i32}:i32 => $pos;
 			ls void $pos $v->$size => $status;
 			jif $status %success %failure;
 			success:
 			add void $v->$data $offset->$value => $dst;
 			ptr $value->$value => $src;
-			movb i8 {i32} $src => $dst;
+			movb i32 1:i32 $src => $dst;
 			mov void $pos => $r->$value;
 			failure:
 			~~/
@@ -191,13 +191,13 @@
 	) then [
 		/set r (clone offset)/
 		/asm ~~
-			add void $offset->$value {i8} => $pos;
+			add void $offset->$value {i8}:i32 => $pos;
 			ls void $pos $v->$size => $status;
 			jif $status %success %failure;
 			success:
 			add void $v->$data $offset->$value => $dst;
 			ptr $value->$value => $src;
-			movb i8 {i8} $src => $dst;
+			movb i8 1:i32 $src => $dst;
 			mov void $pos => $r->$value;
 			failure:
 			~~/
@@ -241,13 +241,13 @@
 	/if (and (not (isNull v)) (not (isNull offset))) then [
 		/set r 0/
 		/asm ~~
-			add void $offset->$value {i32} => $pos;
+			add void $offset->$value {i32}:i32 => $pos;
 			ls void $pos $v->$size => $status;
 			jif $status %success %failure;
 			success:
 			add void $v->$data $offset->$value => $src;
 			ptr $r->$value => $dst;
-			movb i8 {i32} $src => $dst;
+			movb i32 1:i32 $src => $dst;
 			failure:
 			~~/
 	]/
@@ -265,13 +265,13 @@
 	/if (and (not (isNull v)) (not (isNull offset))) then [
 		/set r 0.0/
 		/asm ~~
-			add void $offset->$value {f32} => $pos;
+			add void $offset->$value {f32}:i32 => $pos;
 			ls void $pos $v->$size => $status;
 			jif $status %success %failure;
 			success:
 			add void $v->$data $offset->$value => $src;
 			ptr $r->$value => $dst;
-			movb i8 {f32} $src => $dst;
+			movb f32 1:i32 $src => $dst;
 			failure:
 			~~/
 	]/
@@ -319,13 +319,13 @@
 	/if (and (not (isNull v)) (not (isNull offset))) then [
 		/set r (Handle)/
 		/asm ~~
-			add void $offset->$value {i32} => $pos;
+			add void $offset->$value {i32}:i32 => $pos;
 			ls void $pos $v->$size => $status;
 			jif $status %success %failure;
 			success:
 			add void $v->$data $offset->$value => $src;
 			ptr $r->$value => $dst;
-			movb i8 {i32} $src => $dst;
+			movb i32 1:i32 $src => $dst;
 			failure:
 			~~/
 	]/
@@ -343,13 +343,13 @@
 	/if (and (not (isNull v)) (not (isNull offset))) then [
 		/set r false/
 		/asm ~~
-			add void $offset->$value {i8} => $pos;
+			add void $offset->$value {i8}:i32 => $pos;
 			ls void $pos $v->$size => $status;
 			jif $status %success %failure;
 			success:
 			add void $v->$data $offset->$value => $src;
 			ptr $r->$value => $dst;
-			movb i8 {i8} $src => $dst;
+			movb i8 1:i32 $src => $dst;
 			failure:
 			~~/
 	]/

@@ -152,7 +152,7 @@
 	r
 ]
 
-[substring String <v String> <start Int> <length Int>
+[sub String <v String> <start Int> <length Int>
 	/let <r String>/
 	/if (and (not (isNull v)) (and (not (isNull start)) (not (isNull length)))) then [
 		/if (and (greater start 0) (and (greater length 0) (not (greater (add start length) (size v))))) then [

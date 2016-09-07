@@ -7,9 +7,6 @@
 # import media helper to support window and scene rendering.
 /import "/media.jg"/
 
-/import "/templates/Array.jg"/
-[<implement Array Int>]
-
 [prepareAssets
 	(textureAcquire "tLogo" (fileReadContentsBuffer "logo.png" "app") true false)
 	(materialAcquire "mLogo"
